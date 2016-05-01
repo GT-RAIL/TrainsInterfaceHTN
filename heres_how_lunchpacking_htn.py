@@ -49,6 +49,10 @@ class WebInterface(object):
 
         self.htn=HTN(items);
 
+        #Are we asking a question
+        #Currently only Grouping supported but we may have to add teach new task
+        self.currentQuestion=None
+
     #this is run when a particular button is clicked on the Web Interface
     def button_clicked(self,message):
         if(message['button']=='teachNewTask'):
@@ -72,9 +76,25 @@ class WebInterface(object):
         taskName = message["action"]
         print( "<Execute Callback> " + taskName )
         inputs =message["inputs"];
-        self.htn.executeTask(taskName, inputs);
+        success,isGroupable=self.htn.executeTask(taskName, inputs);
+        if(isGroupable):
+            self.currentQuestion='Grouping'
+            self.ask_question({'question':'Do you wish to group the last 2 subtasks into a single task?','answers':['yes','no']})
         self.htn.display()
         print("</Execute Callback>")
+
+    #send to the ROS topic here
+    #TODO make this post to a ROS Topic
+    def ask_question(self,message):
+        print message
+        pass
+
+    def get_response(self,message):
+        answer=message['answer']
+        if currentQuestion=='Grouping':
+            if(answer=='yes'):
+                currentQuestion=None
+                self.htn.groupLastTasks()
 
 
     def objects_segmented(self,message):
@@ -82,19 +102,20 @@ class WebInterface(object):
 
 
 with open(COMMAND_FILE) as command_file:    
-    with open(ITEM_FILE) as item_file:    
-    
-    data = json.load(command_file)
-    items= json.load(item_file)
-    web=WebInterface(items)
-    #executing a series of commands from a JSON file instead of doing this through ROS for now
-    for datum in data:
-        if(datum['type']=='button_clicked'):
-            web.button_clicked(datum['message'])
-        elif(datum['type']=='execute_task'):
-            web.execute_task(datum['message'])
-        elif(datum['type']=='recognized_objects'):
-            web.objects_segmented(datum['message'])
+    with open(ITEMS_FILE) as item_file:    
+        data = json.load(command_file)
+        items= json.load(item_file)
+        web=WebInterface(items)
+        #executing a series of commands from a JSON file instead of doing this through ROS for now
+        for datum in data:
+            if(datum['type']=='button_clicked'):
+                web.button_clicked(datum['message'])
+            elif(datum['type']=='execute_task'):
+                web.execute_task(datum['message'])
+            elif(datum['type']=='recognized_objects'):
+                web.objects_segmented(datum['message'])
+            elif(datum['type']=='question_response'):
+                web.objects_segmented(datum['message'])
 # if __name__ == '__main__':
 #     rospy.init_node('heres_how', anonymous=False)
 #     w = World()

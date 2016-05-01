@@ -40,10 +40,42 @@ class HTN(object):
         self.tree.append(newTask)
         self.currentSubtask=len(self.tree)-1 #change current task to this new task
 
+
+    #checks if 2 tasks are groupable
+    #the level gives the level to which you want these 2 slots to be compared. They can be compared with  Type and Slot Name
+    def isGroupable(self,task1,task2,level="Type"):
+        #forgive small typos
+        level=level.lower()
+        #check that the output sizes match the inputs
+        if(len(task1.outputs)<=len(task2.inputs)):
+            #depending on the level go through each 1 and see if they match
+            for output in task1.outputs:
+                found=False
+                used= [0] * len(task2.inputs)
+                for i,input in enumerate(task2.inputs):
+                    if(level=="type"):
+                        if task2.inputs[i].type==output.type and not used[i]:
+                            found=True
+                            used[i]=1
+                    elif(level=="slot name"):
+                        if task2.inputs[i].slot_name==output.slot_name and not used[i]:
+                            found=True
+                            used[i]=1
+                if not found:
+                    return False
+            return True
+        else:
+            return False
+
+    #groups the last 2 tasks in the current subtask
+    #and also appends new group task to action
+    def groupLastTasks(self):
+        pass
+
     #find the correct action and then check if the inputs match
     #if they do, this runs the action and adds it to the current point 
-    #in the tree
-    #@return if execution was successful
+    #in the tree    
+    #@return if execution was successful, whether the last two subtasks are group-able
     def executeTask(self,taskName,inputs):
         #check if this is in the set of actions the user can use.
         #if it is add it as a subtask of the current highlighted task
@@ -54,22 +86,33 @@ class HTN(object):
             final_input=[]
             #convert the inputs from a series of strings to a series of Slot classes
             #for each input find the appropriate slot and put it into it
+
             for input in inputs:
                 #if this does not work we cannot figure out where to put this input, so exec fails
                 if not self.world.makeSlot(input,action.inputs):
-                    return False
+                    print "Error matching slot "+input
+                    return False,False
                 #there is a slot add to input
                 else:
-                    final_input.append(self.world.getObject(Input))
+                    final_input.append(self.world.getObject(input))
             
             #add the task to the current task that is highlighted-
             self.tree[self.currentSubtask].addSubtask(action)
+
+            #check if the 2 subtasks are groupable
+            subtasks=self.tree[self.currentSubtask].subtasks
+            isGroupable=False
+            if len(subtasks)>1:
+                
+                if self.isGroupable(subtasks[-2],subtasks[-1]):
+                    isGroupable=True
+
             #execute the task
-            action.execute(final_input,world)
-            return True
+            action.execute(final_input,self.world)
+            return True,isGroupable
         else :
             print 'The  %s action does not exist'% (taskName)
-            return False
+            return False,False
 
     #ending a subtask. Over here we add this task to the complex actions
     def saveCurrentSubtask(self):
@@ -99,10 +142,14 @@ class HTN(object):
         output+= ", \"focus\": \""+str(self.tree[self.currentSubtask].name==action.name)+"\"" 
         output+= ", \"defined\": \"true\""  #not sure what defined means so I return true here
         output+= ", \"decompositions\": ["
+        count=0
         for subtask in action.subtasks:
+            if(count>0):
+                output+=","
             output+= "{ \"steps\": [" 
             output+=self.build_htn(subtask)
             output+=']}'
+            count+=1
         output+=']'
         output+='}'
         return output

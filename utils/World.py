@@ -14,7 +14,7 @@ from Action import Slot
 class World(object):
     def __init__(self,items):
         # Item specification for initialization 
-        self.itemSpec = items['item']
+        self.itemSpec = items['items']
 
         # A list of all items possible
         self.items = []
@@ -24,7 +24,7 @@ class World(object):
         self.containers = []
 
         # Initialize containers
-        for container in items['containers']
+        for container in items['containers']:
             self.containers.append( Container(container['name']) )
 
         # Intialize items
@@ -40,15 +40,26 @@ class World(object):
     '''
     Used for getting an object in the item list 
     '''
-    def getObject(self,item):
+    def getObject(self,input):
         for item in self.available_items:
-            if input==item.name and item.manipulable:
+            if self.compare(input,item.name):
                 return item
 
         for container in self.containers:
             if(input==container.name):
                 return container
 
+
+    '''
+    Comparing 2 items should be compared like this 
+    to avoid any issues with typos and strings with
+    numeric IDs
+    '''
+    def compare(self,item1,item2):
+        if item1.upper().startswith(item2.upper()):
+            return True
+        else:
+            return False
 
     '''
     This is called when we get a new set of recognized items
@@ -60,7 +71,7 @@ class World(object):
             for item in self.items:
                 # At this point o will have a numeric id at the end of its name if
                 # there are multiple versions of this object.
-                if recognized_item['name'].upper().startswith(item.name.upper()):
+                if self.compare(recognized_item['name'],item.name):
                     #This item is a match so mark it as recognized
                     self.available_items.append(item)
 
@@ -70,7 +81,7 @@ class World(object):
     def makeSlot(self,input,action_inputs):
         #check if it is an item or container
         for item in self.available_items:
-            if input==item.name and item.manipulable:
+            if self.compare(input,item.name):
                 for action_input in action_inputs:
                     if action_input.slot_name==None and action_input.type=='Item':
                         action_input.slot_name=input

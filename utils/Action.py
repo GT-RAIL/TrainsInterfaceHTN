@@ -37,6 +37,7 @@ class Action(object):
     #we have to copy over the inputs and outputs of each of the subtasks
     def addSubtask(self,subtask):
         #copy the inputs but leave out the specifics of the name
+        
         inputs=[]
         outputs=[]
         for input in self.inputs:
@@ -94,7 +95,7 @@ class Action(object):
         #execute the subtasks with part of the input
         current_input_point=0
         for subtask in self.subtask:
-            subtask.execute(current_input_point:current_input_point+len(subtask.inputs),world)
+            subtask.execute(inputs[current_input_point:current_input_point+len(subtask.inputs)],world)
             current_input_point+=len(subtask.inputs)
     	
 
@@ -107,8 +108,10 @@ class Pickup(Action):
         super(Pickup,self).__init__('Pick up','primitive',[pickup_object],[pickup_object])
 
     def execute(self,inputs,world):
+        inputs[0].manipulable=False
+        world.holding=inputs[0]
         # @TODO ROS things to make the actual pick up get called
-        pass
+        return inputs[0]
 
 #pick up an item into the robots hands. It outputs the item that it has picked up
 class Store(Action):
@@ -118,6 +121,8 @@ class Store(Action):
         super(Store,self).__init__('Store','primitive',[store_object,store_container])
 
     def execute(self,inputs,world):
+        world.holding=None
+        inputs[1].addItem(inputs[0])
         # @TODO ROS things to make the actual pick up get called
 
         pass

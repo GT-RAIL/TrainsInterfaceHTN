@@ -15,7 +15,7 @@
 "containers":[
             {"name": "Lunchbox 1", "type": "Lunchbox"}, 
             {"name": "Lunchbox 2", "type": "Lunchbox"}, 
-            {"name": "Lunchbox 3", "type": "Lunchbox"}, 
+            {"name": "Lunchbox 3", "type": "Lunchbox"}
                   ]
 
       }

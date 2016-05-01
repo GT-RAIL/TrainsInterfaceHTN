@@ -6,5 +6,7 @@
             {"name": "Coffee", "type": "Drink"},
             {"name": "Cookies", "type": "Snack"}]}},
 {"type":"execute_task","message":{"action":"Pick up","inputs":["Apple"]}},
+{"type":"execute_task","message":{"action":"Store","inputs":["Apple","Lunchbox 1"]}},
+{"type":"question_response","message":{"answer":"yes"}},
 {"type":"button_clicked","message":{"button":"updateHTN"}}
 ]
