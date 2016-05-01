@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<package>
+  <name>pydisco</name> 
+  <version>0.1.0</version>
+  <description> PyDISCO is a Python HTN creator used for running the TRAINS interface </description>
+  <author>  Aaron St.Clair </author>
+  <author>Carl Saldanha</author>
+  <maintainer email="csaldanha3@gatech.edu">Carl Saldanha</maintainer>
+
+  <license>BSD</license>
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <build_depend>rospy</build_depend>
+  <build_depend>message_generation</build_depend>
+
+  <run_depend>roscpp</run_depend>
+  <run_depend>message_runtime</run_depend>
+    <run_depend>rospy</run_depend>
+  <run_depend>std_msgs</run_depend>
+
+</package>
+
+

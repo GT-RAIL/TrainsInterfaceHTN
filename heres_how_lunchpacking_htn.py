@@ -34,8 +34,10 @@ from utils.HTN import HTN
 '''
 SAVE_FOLDER='save'
 ERROR_LOG_FOLDER='errorlog'
+
 COMMAND_FILE='commands.json'
 ITEMS_FILE='items.json' #file with a list of items and containers in 
+
 
 '''
     This will listen to topics from ROS and execute appropriate tasks.
@@ -114,12 +116,17 @@ class WebInterface(object):
     def objects_segmented(self,message):
         self.htn.world.refreshItems(message['objects'])
 
+with open(ITEMS_FILE) as item_file:    
+    items= json.load(item_file)
+    web=WebInterface(items)
 
-with open(COMMAND_FILE) as command_file:    
-    with open(ITEMS_FILE) as item_file:    
+if __name__ == '__main__':
+    rospy.Subscriber("web_interface/button", "heres_how_msgs/WebInterfaceButton",web.execute_task);
+    rospy.spin()
+#we're not using ROS pick up the commands from a file
+else:
+    with open(COMMAND_FILE) as command_file:    
         data = json.load(command_file)
-        items= json.load(item_file)
-        web=WebInterface(items)
         #executing a series of commands from a JSON file instead of doing this through ROS for now
         for datum in data:
             if(datum['type']=='button_clicked'):
