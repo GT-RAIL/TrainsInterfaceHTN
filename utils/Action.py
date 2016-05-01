@@ -34,18 +34,22 @@ class Action(object):
         #if this is a non-primitive task it could have
         self.subtasks=[]
 
+        #there are grouped subtasks which behave differently during 
+        #execution as they might share input
+        self.groupedSubtasks=False
+
     #we have to copy over the inputs and outputs of each of the subtasks
     def addSubtask(self,subtask):
         #copy the inputs but leave out the specifics of the name       
         inputs=[]
         outputs=[]
-        for input in self.inputs:
+        for input in subtask.inputs:
             inputs.append(copy.copy(input))
-            inputs[-1].slot_name=None
+            #inputs[-1].slot_name=None
     	self.inputs.extend(inputs)
-        for output in self.inputs:
-            inputs.append(copy.copy(output))
-            outputs[-1].slot_name=None
+        for output in subtask.inputs:
+            outputs.append(copy.copy(output))
+            #outputs[-1].slot_name=None
     	self.outputs.extend(outputs)
     	self.subtasks.append(subtask)
 
@@ -55,11 +59,11 @@ class Action(object):
     '''
     def getSlotNames(self):
         output= [] 
+        print self.name
+        print len(self.inputs)
         for input in self.inputs:
             if input.slot_name: 
                 output.append(input.slot_name)
-            else:
-                output.append('')
         return output
 
 
@@ -71,6 +75,24 @@ class Action(object):
     	groupedAction=Action (self.name+" & "+action.name,task_type='learned')
         groupedAction.addSubtask(self)
         groupedAction.addSubtask(action)
+        used= [0] * len(action.inputs)
+        #depending on the level go through each 1 and see if they match
+        for output in self.outputs:
+            for i,input in enumerate(action.inputs):
+                if action.inputs[i].type==output.type and not used[i]:
+                    used[i]=1
+        #go through all the outputs used in the second task and remove them
+        #grouped actions will never have outputs from first based on groupability definition
+        groupedAction.outputs=[groupedAction.outputs[i] for i,x in enumerate(self.outputs) if not x.name==groupedAction.outputs[i].name]
+        new_inputs=[]
+        for i,use in enumerate(used):
+            #slot is in use internally, no need to save
+            if not use:
+                new_inputs.append(groupedAction.inputs[len(self.inputs)+i])
+
+        groupedAction.inputs=groupedAction.inputs[:len(self.inputs)]
+        groupedAction.inputs.extend(new_inputs)
+        groupedAction.groupedSubtasks=True
         return groupedAction
 
 
@@ -95,12 +117,26 @@ class Action(object):
     @return success,info required
     '''
     def execute(self,inputs,world):
-        #execute the subtasks with part of the input
+        #execute the subtasks with part of the input 
+        #unless grouped then all subtasks share input
         current_input_point=0
-        for subtask in self.subtask:
-            subtask.execute(inputs[current_input_point:current_input_point+len(subtask.inputs)],world)
+        outputs=[]
+        for subtask in self.subtasks:
+            if groupedAction.groupedSubtasks:
+                success,reason=subtask.execute(inputs,world)
+            else:
+                success,reason=subtask.execute(inputs[current_input_point:current_input_point+len(subtask.inputs)],world)
             current_input_point+=len(subtask.inputs)
-    	
+            #if any one fails then the whole thing fails
+            #TODO probably need to run an undo or something on the physical side
+            if not success:
+                return success,reason
+            elif reason:
+                outputs.append(reason)
+        #if its just one make that the output
+        if(len(outputs)<2):
+            outputs=outputs[0]
+    	return True,reason
 
 
 

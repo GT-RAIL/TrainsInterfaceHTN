@@ -51,8 +51,11 @@ class HTN(object):
             #depending on the level go through each 1 and see if they match
             for output in task1.outputs:
                 found=False
+                #check if the input is used to fill any other output
                 used= [0] * len(task2.inputs)
+                #go through all inputs for every output
                 for i,input in enumerate(task2.inputs):
+                    #check the type of the slots
                     if(level=="type"):
                         if task2.inputs[i].type==output.type and not used[i]:
                             found=True
@@ -69,7 +72,8 @@ class HTN(object):
 
     #remove all the slot names recursively from a tree
     def removeSlotNamesRecursive(self,groupedTask):
-        cleanedCopy=copy.copy(groupedTask)
+        #make object copies of what we need
+        cleanedCopy=copy.deepcopy(groupedTask)
         for input in cleanedCopy.inputs:
             input.slot_name=None
         subtasks=[]
@@ -85,15 +89,23 @@ class HTN(object):
         subtasks=self.tree[self.currentSubtask].subtasks
         #group and keep even the slot names
         groupedTask=(subtasks[-2]).groupWith(subtasks[-1])
+
         #remove the tasks and add grouped task in
         subtasks=subtasks[:len(subtasks)-2]
         subtasks.append(groupedTask)
         #add the new subtasks list in
         self.tree[self.currentSubtask].subtasks=subtasks 
+        #reset the input of the top level to be the bottom
+        self.tree[self.currentSubtask].inputs=[]
+        self.tree[self.currentSubtask].outputs=[]
+        for subtask in self.tree[self.currentSubtask].subtasks:
+            self.tree[self.currentSubtask].inputs.extend(subtask.inputs)
+            self.tree[self.currentSubtask].outputs.extend(subtask.outputs)
         #then lose the slot names to make it a reuseable action
         #clean up the grouped task for use in actions
         cleanedCopy=self.removeSlotNamesRecursive(groupedTask)
         self.actions[groupedTask.name]=cleanedCopy
+
 
 
     #find the correct action and then check if the inputs match
@@ -144,9 +156,8 @@ class HTN(object):
     #ending a subtask. Over here we add this task to the complex actions
     def saveCurrentSubtask(self):
         #self.actions.append()
-        action= copy.deepcopy(self.tree[self.currentSubtask])
+        action= removeSlotNamesRecursive(self.tree[self.currentSubtask])
         self.actions.append(action)
-        pass
 
     #this saves the current tree to file and then wipes it 
     #also needs to reset the action queue to only primitive actions
