@@ -14,4 +14,5 @@ class Container(object):
         self.contains = []
 
     def addItem(self, item):
+    	item.manipulable=False
         self.contains.append(item)

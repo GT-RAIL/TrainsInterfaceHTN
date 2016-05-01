@@ -20,7 +20,7 @@ from Item import Item
 from World import World
 class HTN(object):
 
-    def __init__(self):
+    def __init__(self,items):
         self.tree=[] #the tree is an array of actions starting from the top and going to the bottom
         self.actionsPerformed=[] #maintains the list of Actions executed so we can undo
         self.actions={} #the set of actions that the user can use 
@@ -31,7 +31,7 @@ class HTN(object):
         store  = Store()
         self.actions={"Pick up":pickup,"Store":store}
 
-        self.world = World() #stores the information about the world
+        self.world = World(items) #stores the information about the world
 
     #This will add a new task into the current state of the HTN
     def addNewTask(self,taskName):
@@ -50,17 +50,22 @@ class HTN(object):
         if self.actions[taskName]:
             #make a copy so that you can fill it in with the correct inputs
             action= copy.deepcopy(self.actions[taskName])
+            #array of Item and containers that go in a slot
+            final_input=[]
             #convert the inputs from a series of strings to a series of Slot classes
             #for each input find the appropriate slot and put it into it
             for input in inputs:
                 #if this does not work we cannot figure out where to put this input, so exec fails
                 if not self.world.makeSlot(input,action.inputs):
                     return False
+                #there is a slot add to input
+                else:
+                    final_input.append(self.world.getObject(Input))
             
             #add the task to the current task that is highlighted-
             self.tree[self.currentSubtask].addSubtask(action)
             #execute the task
-            action.execute()
+            action.execute(final_input,world)
             return True
         else :
             print 'The  %s action does not exist'% (taskName)
@@ -69,6 +74,8 @@ class HTN(object):
     #ending a subtask. Over here we add this task to the complex actions
     def saveCurrentSubtask(self):
         #self.actions.append()
+        action= copy.deepcopy(self.tree[self.currentSubtask])
+        self.actions.append(action)
         pass
 
     #this saves the current tree to file and then wipes it 

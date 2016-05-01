@@ -25,15 +25,29 @@ from std_msgs.msg import Empty
 import json
 
 from utils.HTN import HTN
+
+
+'''
+---------------------
+      CONSTANTS
+---------------------
+'''
+SAVE_FOLDER='save'
+ERROR_LOG_FOLDER='errorlog'
+COMMAND_FILE='commands.json'
+ITEMS_FILE='items.json' #file with a list of items and containers in 
+
 '''
     This will listen to topics from ROS and execute appropriate tasks.
     It will listen for buttons being pressed on the web so that it can pass information
 '''
 class WebInterface(object):
-    def __init__(self):
+    def __init__(self,items):
         #     Topic btnTopic = new Topic(ros, "web_interface/button", "heres_how_msgs/WebInterfaceButton"); call button clicked
         #Topic executeTopic = new Topic(ros, "web_interface/execute_action", "heres_how_msgs/WebInterfaceExecuteAction"); call execute task
-        self.htn=HTN();
+        #Topic segmentedObjectsTopic = new Topic(ros, "object_recognition_listener/recognized_objects", "rail_manipulation_msgs/SegmentedObjectList") objects_segmented
+
+        self.htn=HTN(items);
 
     #this is run when a particular button is clicked on the Web Interface
     def button_clicked(self,message):
@@ -56,22 +70,31 @@ class WebInterface(object):
     #ROS topic for receiving executed actions with an array of inputs
     def execute_task(self,message):
         taskName = message["action"]
-        print( "<Execute Callback>" + taskName )
+        print( "<Execute Callback> " + taskName )
         inputs =message["inputs"];
         self.htn.executeTask(taskName, inputs);
         self.htn.display()
         print("</Execute Callback>")
 
 
-web=WebInterface()
-with open('commands.json') as data_file:    
-    data = json.load(data_file)
+    def objects_segmented(self,message):
+        self.htn.world.refreshItems(message['objects'])
+
+
+with open(COMMAND_FILE) as command_file:    
+    with open(ITEM_FILE) as item_file:    
+    
+    data = json.load(command_file)
+    items= json.load(item_file)
+    web=WebInterface(items)
     #executing a series of commands from a JSON file instead of doing this through ROS for now
     for datum in data:
         if(datum['type']=='button_clicked'):
             web.button_clicked(datum['message'])
         elif(datum['type']=='execute_task'):
             web.execute_task(datum['message'])
+        elif(datum['type']=='recognized_objects'):
+            web.objects_segmented(datum['message'])
 # if __name__ == '__main__':
 #     rospy.init_node('heres_how', anonymous=False)
 #     w = World()

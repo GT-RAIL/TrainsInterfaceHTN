@@ -83,12 +83,20 @@ class Action(object):
     '''
     This method is overriden in subclasses executing with inputs.
     At this point of execution the slots should be filled with all information
-    needed to execute
+    needed to execute.
+    We take an object of the world in case we have to manipulate it
     It returns the required outputs for the function & checks if the output
-    seems to be correct
+    seems to be correct.
+    In this method we are doing the non-primitive execution as it groups to 
+    primitive
     '''
-    def execute(self):
-    	pass
+    def execute(self,inputs,world):
+        #execute the subtasks with part of the input
+        current_input_point=0
+        for subtask in self.subtask:
+            subtask.execute(current_input_point:current_input_point+len(subtask.inputs),world)
+            current_input_point+=len(subtask.inputs)
+    	
 
 
 
@@ -98,7 +106,7 @@ class Pickup(Action):
         pickup_object=Slot('pickup','Item') 
         super(Pickup,self).__init__('Pick up','primitive',[pickup_object],[pickup_object])
 
-    def execute(self):
+    def execute(self,inputs,world):
         # @TODO ROS things to make the actual pick up get called
         pass
 
@@ -109,8 +117,9 @@ class Store(Action):
         store_container=Slot('store','Container') 
         super(Store,self).__init__('Store','primitive',[store_object,store_container])
 
-    def execute(self):
+    def execute(self,inputs,world):
         # @TODO ROS things to make the actual pick up get called
+
         pass
 
 

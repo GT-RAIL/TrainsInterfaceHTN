@@ -3,8 +3,7 @@
 1. In Action.py class Pickup and Store we need to call a ROS topic to actually do the pickup
 2. Class HTN is incomplete. 
 3. Working on Grouping tasks together
-4. Pick items from file
-5. Logging
+4. Logging & undo
 
 ##How to Use
 

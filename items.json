@@ -1,0 +1,21 @@
+ {"items":[{"name": "Apple", "type": "Fruit"}, 
+            {"name": "Cheezits", "type": "Snack"},
+            {"name": "Coffee", "type": "Drink"},
+            {"name": "Cookies", "type": "Snack"},
+            {"name": "Juice", "type": "Drink"}, 
+            {"name": "Lemon", "type": "Fruit"}, 
+            {"name": "Milk", "type": "Drink"}, 
+            {"name": "Nutella", "type": "Snack"}, 
+            {"name": "Orange", "type": "Fruit"}, 
+            {"name": "Peach", "type": "Fruit"}, 
+            {"name": "Pear", "type": "Fruit"}, 
+            {"name": "Raisins", "type": "Snack"}, 
+            {"name": "Soup", "type": "Main"}, 
+            {"name": "Tuna", "type": "Main"}],
+"containers":[
+            {"name": "Lunchbox 1", "type": "Lunchbox"}, 
+            {"name": "Lunchbox 2", "type": "Lunchbox"}, 
+            {"name": "Lunchbox 3", "type": "Lunchbox"}, 
+                  ]
+
+      }

@@ -1,6 +1,10 @@
 [
 {"type":"button_clicked","message":{"button":"teachNewTask","parameters":["Hello"]}},
-
+{"type":"recognized_objects","message":{"objects":[
+            {"name": "Apple", "type": "Fruit"}, 
+            {"name": "Cheezits", "type": "Snack"},
+            {"name": "Coffee", "type": "Drink"},
+            {"name": "Cookies", "type": "Snack"}]}},
 {"type":"execute_task","message":{"action":"Pick up","inputs":["Apple"]}},
 {"type":"button_clicked","message":{"button":"updateHTN"}}
 ]
