@@ -67,15 +67,39 @@ class HTN(object):
         else:
             return False
 
+    #remove all the slot names recursively from a tree
+    def removeSlotNamesRecursive(self,groupedTask):
+        cleanedCopy=copy.copy(groupedTask)
+        for input in cleanedCopy.inputs:
+            input.slot_name=None
+        subtasks=[]
+        for subtask in cleanedCopy.subtasks:
+            subtasks.append(self.removeSlotNamesRecursive(subtask))
+        cleanedCopy.subtasks=subtasks
+        return cleanedCopy
+
     #groups the last 2 tasks in the current subtask
     #and also appends new group task to action
     def groupLastTasks(self):
-        pass
+        #get the last 2 tasks
+        subtasks=self.tree[self.currentSubtask].subtasks
+        #group and keep even the slot names
+        groupedTask=(subtasks[-2]).groupWith(subtasks[-1])
+        #remove the tasks and add grouped task in
+        subtasks=subtasks[:len(subtasks)-2]
+        subtasks.append(groupedTask)
+        #add the new subtasks list in
+        self.tree[self.currentSubtask].subtasks=subtasks 
+        #then lose the slot names to make it a reuseable action
+        #clean up the grouped task for use in actions
+        cleanedCopy=self.removeSlotNamesRecursive(groupedTask)
+        self.actions[groupedTask.name]=cleanedCopy
+
 
     #find the correct action and then check if the inputs match
     #if they do, this runs the action and adds it to the current point 
     #in the tree    
-    #@return if execution was successful, whether the last two subtasks are group-able
+    #@return if execution was successful, whether the last two subtasks are group-able, error info
     def executeTask(self,taskName,inputs):
         #check if this is in the set of actions the user can use.
         #if it is add it as a subtask of the current highlighted task
@@ -91,10 +115,15 @@ class HTN(object):
                 #if this does not work we cannot figure out where to put this input, so exec fails
                 if not self.world.makeSlot(input,action.inputs):
                     print "Error matching slot "+input
-                    return False,False
+                    return False,False,{'reason':'match fail','failed_input':input}
                 #there is a slot add to input
                 else:
                     final_input.append(self.world.getObject(input))
+
+            #execute the task
+            success,reason=action.execute(final_input,self.world)
+            if not success:
+                return False,False,{'reason':reason}
             
             #add the task to the current task that is highlighted-
             self.tree[self.currentSubtask].addSubtask(action)
@@ -107,12 +136,10 @@ class HTN(object):
                 if self.isGroupable(subtasks[-2],subtasks[-1]):
                     isGroupable=True
 
-            #execute the task
-            action.execute(final_input,self.world)
-            return True,isGroupable
+            return True,isGroupable,None
         else :
             print 'The  %s action does not exist'% (taskName)
-            return False,False
+            return False,False,{'reason':'The  %s action does not exist'% (taskName)}
 
     #ending a subtask. Over here we add this task to the complex actions
     def saveCurrentSubtask(self):
@@ -143,6 +170,7 @@ class HTN(object):
         output+= ", \"defined\": \"true\""  #not sure what defined means so I return true here
         output+= ", \"decompositions\": ["
         count=0
+
         for subtask in action.subtasks:
             if(count>0):
                 output+=","

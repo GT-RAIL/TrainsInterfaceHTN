@@ -36,8 +36,7 @@ class Action(object):
 
     #we have to copy over the inputs and outputs of each of the subtasks
     def addSubtask(self,subtask):
-        #copy the inputs but leave out the specifics of the name
-        
+        #copy the inputs but leave out the specifics of the name       
         inputs=[]
         outputs=[]
         for input in self.inputs:
@@ -69,7 +68,10 @@ class Action(object):
     @return The grouped action
     '''
     def groupWith(self,action):
-    	pass
+    	groupedAction=Action (self.name+" & "+action.name,task_type='learned')
+        groupedAction.addSubtask(self)
+        groupedAction.addSubtask(action)
+        return groupedAction
 
 
     '''
@@ -90,6 +92,7 @@ class Action(object):
     seems to be correct.
     In this method we are doing the non-primitive execution as it groups to 
     primitive
+    @return success,info required
     '''
     def execute(self,inputs,world):
         #execute the subtasks with part of the input
@@ -108,10 +111,15 @@ class Pickup(Action):
         super(Pickup,self).__init__('Pick up','primitive',[pickup_object],[pickup_object])
 
     def execute(self,inputs,world):
+        #base failure cases
+        if not world.holding == None:
+            return False,"Robot is holding an object"
+        if inputs[0].manipulable==False:
+            return False,"Pick up item not manipulable"
         inputs[0].manipulable=False
         world.holding=inputs[0]
         # @TODO ROS things to make the actual pick up get called
-        return inputs[0]
+        return True,inputs[0]
 
 #pick up an item into the robots hands. It outputs the item that it has picked up
 class Store(Action):
@@ -121,11 +129,13 @@ class Store(Action):
         super(Store,self).__init__('Store','primitive',[store_object,store_container])
 
     def execute(self,inputs,world):
+        if not world.holding == inputs[0]:
+            return False,"Robot is not holding that object"
         world.holding=None
         inputs[1].addItem(inputs[0])
         # @TODO ROS things to make the actual pick up get called
 
-        pass
+        return True,None
 
 
 

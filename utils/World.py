@@ -61,6 +61,8 @@ class World(object):
         else:
             return False
 
+
+
     '''
     This is called when we get a new set of recognized items
     We reset which items are considererd manipulable at that point
@@ -74,6 +76,18 @@ class World(object):
                 if self.compare(recognized_item['name'],item.name):
                     #This item is a match so mark it as recognized
                     self.available_items.append(item)
+
+    def findAlternatives(self,input):
+        type=''
+        alternatives=[]
+        for item in self.items:
+            if input==item.name:
+                type=item.typeName
+        for item in self.items:
+            if type==item.typeName and not item.name ==input:
+                alternatives.append(item.name)
+        alternatives.append('None. Undo! ')
+        return alternatives
 
 
     #make a slot class which is specified down to the input

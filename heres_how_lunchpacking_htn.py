@@ -76,10 +76,20 @@ class WebInterface(object):
         taskName = message["action"]
         print( "<Execute Callback> " + taskName )
         inputs =message["inputs"];
-        success,isGroupable=self.htn.executeTask(taskName, inputs);
-        if(isGroupable):
-            self.currentQuestion='Grouping'
+        success,isGroupable,errorInfo=self.htn.executeTask(taskName, inputs);
+
+        #Ask questions about grouping and about substitution
+        if((not success) and errorInfo['reason']=='match fail'):
+            #one or more of the inputs might have failed to register
+            self.currentQuestion={'name':'Substitution','message':message,'failed_input':errorInfo['failed_input']}
+            self.ask_question({'question':errorInfo['failed_input']+' could not be found. Would you instead like to try','answers':self.htn.world.findAlternatives(errorInfo['failed_input'])})
+        elif(isGroupable):
+            self.currentQuestion={'name':'Grouping'}
             self.ask_question({'question':'Do you wish to group the last 2 subtasks into a single task?','answers':['yes','no']})
+        elif(not success):
+            #This is not a question as it has no answers but it does point out why the user failed to run the task
+            self.ask_question({'question':errorInfo,'answers':[]})
+
         self.htn.display()
         print("</Execute Callback>")
 
@@ -91,11 +101,15 @@ class WebInterface(object):
 
     def get_response(self,message):
         answer=message['answer']
-        if currentQuestion=='Grouping':
+        if self.currentQuestion['name']=='Grouping':
             if(answer=='yes'):
-                currentQuestion=None
                 self.htn.groupLastTasks()
-
+        elif self.currentQuestion['name']=='Substitution':
+            inputs=self.currentQuestion['message']['inputs']
+            new_items = [answer if x==self.currentQuestion['failed_input'] else x for x in inputs]
+            self.currentQuestion['message']['inputs']=new_items
+            self.execute_task(self.currentQuestion['message'])
+        self.currentQuestion=None
 
     def objects_segmented(self,message):
         self.htn.world.refreshItems(message['objects'])
@@ -115,7 +129,7 @@ with open(COMMAND_FILE) as command_file:
             elif(datum['type']=='recognized_objects'):
                 web.objects_segmented(datum['message'])
             elif(datum['type']=='question_response'):
-                web.objects_segmented(datum['message'])
+                web.get_response(datum['message'])
 # if __name__ == '__main__':
 #     rospy.init_node('heres_how', anonymous=False)
 #     w = World()
