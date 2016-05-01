@@ -1,0 +1,6 @@
+[
+{"type":"button_clicked","message":{"button":"teachNewTask","parameters":["Hello"]}},
+
+{"type":"execute_task","message":{"action":"Pick up","inputs":["Apple"]}},
+{"type":"button_clicked","message":{"button":"updateHTN"}}
+]
