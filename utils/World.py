@@ -77,13 +77,31 @@ class World(object):
                     #This item is a match so mark it as recognized
                     self.available_items.append(item)
 
+    '''
+    get objects by type
+    '''
+    def getObjectsByType(self,type):
+        objects=[]
+        if(type.lower()=='item'):
+            for item in self.items:
+                if item.manipulable:
+                    objects.append(item.name)
+        elif(type.lower()=='contatiner'):
+            for contatiner in self.containers:
+                objects.append(container.name)
+        return objects
+
+    '''
+    Find an alternative for all the items. Take an input and by types 
+    check if we have any alternatives
+    '''
     def findAlternatives(self,input):
         type=''
         alternatives=[]
         for item in self.items:
             if input==item.name:
                 type=item.typeName
-        for item in self.items:
+        for item in self.available_items:
             if type==item.typeName and not item.name ==input:
                 alternatives.append(item.name)
         alternatives.append('None. Undo! ')

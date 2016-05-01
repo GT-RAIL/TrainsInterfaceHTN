@@ -40,6 +40,17 @@ class HTN(object):
         self.tree.append(newTask)
         self.currentSubtask=len(self.tree)-1 #change current task to this new task
 
+    #get all the actions for a particular type
+    def getActions(self,type):
+        #filter by type
+        actions={i: value for i,value in self.actions.iteritems() if value.type==type}
+        return actions
+
+    def getInputsForAction(self,action):
+        inputs=[]
+        for input in self.actions[action].inputs:
+            inputs.append({'type':input.type,'objects':self.world.getObjectsByType(input.type)})
+        return inputs
 
     #checks if 2 tasks are groupable
     #the level gives the level to which you want these 2 slots to be compared. They can be compared with  Type and Slot Name
@@ -198,14 +209,14 @@ class HTN(object):
         Called when we need to display the HTN
     '''
     def display(self):
-        output="{\"data:\":["
+        output="{\"data\":["
         #build an outermost task
         for i,action in enumerate(self.tree):
             if not i==0:
-                output+="],[" #reopen the brackets
+                output+="," #reopen the brackets
             output+=self.build_htn(action)
 
         output+="]}"
-        print(output) #TODO this shouldn't be printing but sending to ROS
+        return (output) #TODO this shouldn't be printing but sending to ROS
 
 
