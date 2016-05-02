@@ -57,7 +57,7 @@ class WebInterface(object):
         #this is the topic used to send the current state of the HTN to the user
         self.htnDisplayTopic=rospy.Publisher("web_interface/htn", String,queue_size=10)
 
-        self.questionTopic=rospy.Publisher("web_interface/question", String,queue_size=10)
+        self.questionTopic=rospy.Publisher("web_interface/question", WebInterfaceQuestion,queue_size=1)
         #Are we asking a question
         #Currently only Grouping supported but we may have to add teach new task
         self.currentQuestion=None
@@ -91,13 +91,14 @@ class WebInterface(object):
         taskName = message.action
         if LOGGING:
             print( "<Execute Callback> " + taskName )
-        inputs =message.inputs;
+        inputs =message.inputs; 
         success,isGroupable,errorInfo=self.htn.executeTask(taskName, inputs);
         #Ask questions about grouping and about substitution
         if((not success) and errorInfo['reason']=='match fail'):
             #one or more of the inputs might have failed to register
+            alternatives=self.htn.world.findAlternatives(errorInfo['failed_input'])
             self.currentQuestion={'name':'Substitution','message':message,'failed_input':errorInfo['failed_input']}
-            self.ask_question({'question':errorInfo['failed_input']+' could not be found. Would you instead like to try','answers':self.htn.world.findAlternatives(errorInfo['failed_input'])})
+            self.ask_question({'question':errorInfo['failed_input']+' could not be found. Would you instead like to try','answers':alternatives})
         elif(isGroupable):
             self.currentQuestion={'name':'Grouping'}
             self.ask_question({'question':'Do you wish to group the last 2 subtasks into a single task?','answers':['yes','no']})
@@ -113,7 +114,10 @@ class WebInterface(object):
     #send a question to the ROS topic here
     #format of a message object {'question':'Do you ...','answers':['yes','no','..']}
     def ask_question(self,message):
-        self.questionTopic.publish(str(message))
+        wb=WebInterfaceQuestion()
+        wb.question=message['question']
+        wb.answers=message['answers']
+        self.questionTopic.publish(wb)
         
 
     #get a response from a question
@@ -123,9 +127,10 @@ class WebInterface(object):
             if(answer=='yes'):
                 self.htn.groupLastTasks()
         elif self.currentQuestion['name']=='Substitution':
-            inputs=self.currentQuestion['message']['inputs']
+            #TODO deal with None Undo
+            inputs=self.currentQuestion['message'].inputs
             new_items = [answer if x==self.currentQuestion['failed_input'] else x for x in inputs]
-            self.currentQuestion['message']['inputs']=new_items
+            self.currentQuestion['message'].inputs=new_items
             self.execute_task(self.currentQuestion['message'])
         self.currentQuestion=None
 
@@ -175,6 +180,7 @@ if __name__ == '__main__':
     rospy.Service('web_interface/action_inputs', WebInterfaceActionInputs, web.action_inputs)
     rospy.Service('web_interface/actions', WebInterfaceActions, web.actions)
     rospy.Subscriber('web_interface/execute_action', WebInterfaceExecuteAction, web.execute_task)
+    rospy.Subscriber('web_interface/question_response', WebInterfaceQuestionResponse, web.get_response)
     rospy.Subscriber('object_recognition_listener/recognized_objects', SegmentedObjectList, web.objects_segmented)
     rospy.spin()
 

@@ -6,6 +6,11 @@
 4. Logging & undo
 
 ##How to Use
+In ROS
+1. rosrun pydisco heres_how_lunchpacking_htn.py 
 
+
+
+In pure Python
 1. Set up a command list from commands.json
 2. run `python heres_how_lunchpacking_htn.py`
