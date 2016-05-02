@@ -73,7 +73,7 @@ class World(object):
             for item in self.items:
                 # At this point o will have a numeric id at the end of its name if
                 # there are multiple versions of this object.
-                if self.compare(recognized_item['name'],item.name):
+                if self.compare(recognized_item.name,item.name):
                     #This item is a match so mark it as recognized
                     self.available_items.append(item)
 

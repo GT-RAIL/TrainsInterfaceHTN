@@ -21,8 +21,8 @@ import rospy
 import rospkg
 from rail_user_queue_manager.msg import Queue
 from heres_how_msgs.srv import WebInterfaceActionInputs,WebInterfaceActions
-from heres_how_msgs.msg import WebInterfaceButton,WebInterfaceInput,WebInterfaceExecuteAction
-
+from heres_how_msgs.msg import WebInterfaceButton,WebInterfaceInput,WebInterfaceExecuteAction,WebInterfaceQuestion,WebInterfaceQuestionResponse
+from rail_manipulation_msgs.msg import SegmentedObjectList
 from std_msgs.msg import Empty,String
 
 import json
@@ -110,11 +110,11 @@ class WebInterface(object):
         if LOGGING:
             print("</Execute Callback>")
 
-    #send to the ROS topic here
-    #TODO make this post to a ROS Topic
+    #send a question to the ROS topic here
+    #format of a message object {'question':'Do you ...','answers':['yes','no','..']}
     def ask_question(self,message):
-        print message
-        pass
+        self.questionTopic.publish(str(message))
+        
 
     #get a response from a question
     def get_response(self,message):
@@ -131,7 +131,6 @@ class WebInterface(object):
 
     #get all the actions in a particular type
     def actions(self,request):
-        print request.Request
         actions=[]
         if request.Request=='primitive':
             actions=self.htn.getActions('primitive')
@@ -159,8 +158,11 @@ class WebInterface(object):
             result['inputs'][-1].objects=input['objects']
         return result
 
+    #run when a list of objects is in the world. This then updates the 
+    #list in World.py
     def objects_segmented(self,message):
-        self.htn.world.refreshItems(message['objects'])
+        #get the list of objects
+        self.htn.world.refreshItems(message.objects)
 
 with open(ITEMS_FILE) as item_file:    
     items= json.load(item_file)
@@ -169,10 +171,11 @@ with open(ITEMS_FILE) as item_file:
 if __name__ == '__main__':
     
     rospy.init_node('trains_htn_planner', anonymous=False)
-    rospy.Subscriber("/web_interface/button", WebInterfaceButton,web.button_clicked)
+    rospy.Subscriber("web_interface/button", WebInterfaceButton,web.button_clicked)
     rospy.Service('web_interface/action_inputs', WebInterfaceActionInputs, web.action_inputs)
     rospy.Service('web_interface/actions', WebInterfaceActions, web.actions)
-    rospy.Subscriber('/web_interface/execute_action', WebInterfaceExecuteAction, web.execute_task)
+    rospy.Subscriber('web_interface/execute_action', WebInterfaceExecuteAction, web.execute_task)
+    rospy.Subscriber('object_recognition_listener/recognized_objects', SegmentedObjectList, web.objects_segmented)
     rospy.spin()
 
 #we're not using ROS pick up the commands from a file
