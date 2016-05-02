@@ -24,11 +24,13 @@ from heres_how_msgs.srv import WebInterfaceActionInputs,WebInterfaceActions
 from heres_how_msgs.msg import WebInterfaceButton,WebInterfaceInput,WebInterfaceExecuteAction,WebInterfaceQuestion,WebInterfaceQuestionResponse
 from rail_manipulation_msgs.msg import SegmentedObjectList
 from std_msgs.msg import Empty,String
+from rospkg import RosPack
 
 import json
 
 from utils.HTN import HTN
 
+rospack = RosPack()
 
 '''
 ---------------------
@@ -38,8 +40,9 @@ from utils.HTN import HTN
 SAVE_FOLDER='save'
 ERROR_LOG_FOLDER='errorlog'
 
-COMMAND_FILE='utils/commands.json'
-ITEMS_FILE='utils/items.json' #file with a list of items and containers in 
+COMMAND_FILE=rospack.get_path("pydisco")+'/utils/commands.json'
+
+ITEMS_FILE=rospack.get_path("pydisco")+'/utils/items.json' #file with a list of items and containers in 
 LOGGING = True
 
 class Object(object):
