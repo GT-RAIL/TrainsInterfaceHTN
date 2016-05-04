@@ -24,10 +24,12 @@ from heres_how_msgs.srv import WebInterfaceActionInputs,WebInterfaceActions
 from heres_how_msgs.msg import WebInterfaceButton,WebInterfaceInput,WebInterfaceExecuteAction,WebInterfaceQuestion,WebInterfaceQuestionResponse
 from rail_manipulation_msgs.msg import SegmentedObjectList
 from std_msgs.msg import Empty,String
+from std_srvs.srv import Empty as EmptySrv
 from rospkg import RosPack
 
 import json
-
+import time
+import HTMLParser
 from utils.HTN import HTN
 
 rospack = RosPack()
@@ -65,6 +67,13 @@ class WebInterface(object):
         #Currently only Grouping supported but we may have to add teach new task
         self.currentQuestion=None
 
+        #this is written to file at the end
+        self.log= {}
+
+        #stores a copy of the HTN at every timestep
+        #used for the UNDO feature
+        self.htnAtTimeStep=[]
+
     #this is run when a particular button is clicked on the Web Interface
     def button_clicked(self,message):
         if(message.button=='teachNewTask'):
@@ -82,16 +91,17 @@ class WebInterface(object):
             pass
         #saves 
         elif(message.button=='finishTask'):
-            self.htn.save()
+            self.save()
         #an update calls the display function which sends the HTN as it stands to ROS
         elif(message.button=='updateHTN'):
             if LOGGING:
                 print self.htn.display()
             self.htnDisplayTopic.publish(self.htn.display())
+        self.htnAtTimeStep.append(self.htn.getHTNState())
 
     #ROS topic for receiving executed actions with an array of inputs
     def execute_task(self,message):
-        taskName = message.action
+        taskName = HTMLParser.HTMLParser().unescape(message.action)
         if LOGGING:
             print( "<Execute Callback> " + taskName )
         inputs =message.inputs; 
@@ -100,19 +110,28 @@ class WebInterface(object):
         if((not success) and errorInfo['reason']=='match fail'):
             #one or more of the inputs might have failed to register
             alternatives=self.htn.world.findAlternatives(errorInfo['failed_input'])
-            self.currentQuestion={'name':'Substitution','message':message,'failed_input':errorInfo['failed_input']}
+            self.currentQuestion={'name':'Substitution','message':message,'failed_input':errorInfo['failed_input'],'options':alternatives}
             self.ask_question({'question':errorInfo['failed_input']+' could not be found. Would you instead like to try','answers':alternatives})
         elif(isGroupable):
-            self.currentQuestion={'name':'Grouping'}
-            self.ask_question({'question':'Do you wish to group the last 2 subtasks into a single task?','answers':['yes','no']})
+            self.currentQuestion={'name':'Grouping','options':['yes','no']}
+            self.ask_question({'question':'Do you wish to group the last 2 subtasks into a single task?','answers':['Yes','No']})
         elif(not success):
             #This is not a question as it has no answers but it does point out why the user failed to run the task
-            self.ask_question({'question':errorInfo,'answers':[]})
+            self.ask_question({'question':str(errorInfo['reason']),'answers':[]})
 
         self.htnDisplayTopic.publish(self.htn.display())
+        self.htnAtTimeStep.append(self.htn.getHTNState())
+
+        #add something to the log
+        self.write_log('execute',{
+            'inputs':message.inputs,
+            'taskName':taskName
+        })        
 
         if LOGGING:
+            print self.htn.display()
             print("</Execute Callback>")
+
 
     #send a question to the ROS topic here
     #format of a message object {'question':'Do you ...','answers':['yes','no','..']}
@@ -126,16 +145,38 @@ class WebInterface(object):
     #get a response from a question
     def get_response(self,message):
         answer=message.answer
-        if self.currentQuestion['name']=='Grouping':
-            if(answer=='yes'):
-                self.htn.groupLastTasks()
-        elif self.currentQuestion['name']=='Substitution':
-            #TODO deal with None Undo
-            inputs=self.currentQuestion['message'].inputs
-            new_items = [answer if x==self.currentQuestion['failed_input'] else x for x in inputs]
-            self.currentQuestion['message'].inputs=new_items
-            self.execute_task(self.currentQuestion['message'])
+        #if we are asking a question. Sometimes we might just send information and user says ok back
+        if(self.currentQuestion):
+            if LOGGING:
+                print self.currentQuestion
+                print message
+            if self.currentQuestion['name']=='Grouping':
+                if(answer.lower()=='yes'):
+                    self.htn.groupLastTasks()
+            elif self.currentQuestion['name']=='Substitution':
+                if(answer.lower()=="none! undo"):
+                    self.undo()
+                else:            
+                    inputs=self.currentQuestion['message'].inputs
+                    new_items = [answer if x==self.currentQuestion['failed_input'] else x for x in inputs]
+                    self.currentQuestion['message'].inputs=new_items
+                    self.execute_task(self.currentQuestion['message'])
+
+            self.htnDisplayTopic.publish(self.htn.display())
+            #add something to the log
+            self.write_log(self,'question',{
+                'question':self.currentQuestion['name'],
+                'options':self.currentQuestion['options'],
+                'answer':answer
+            })
+
+        #save your response from HTN
+        self.htnAtTimeStep.append(self.htn.getHTNState())
         self.currentQuestion=None
+
+    def undo(self):
+        if len(self.htnAtTimeStep)>1:
+            self.htn=self.htnAtTimeStep();
 
     #get all the actions in a particular type
     def actions(self,request):
@@ -156,6 +197,8 @@ class WebInterface(object):
     #get the inputs available for a particular action
     #eg. For pick up there will be one input
     def action_inputs(self,request):
+        request.action=HTMLParser.HTMLParser().unescape(request.action)
+        print request.action
         inputs=self.htn.getInputsForAction(request.action)       
         result={}
         result['inputs']=[]
@@ -167,10 +210,30 @@ class WebInterface(object):
         return result
 
     #run when a list of objects is in the world. This then updates the 
+
     #list in World.py
     def objects_segmented(self,message):
         #get the list of objects
         self.htn.world.refreshItems(message.objects)
+
+    #type can be error,timestep,questions,undo
+    #data a generic object fill with what you like
+    def write_log(self,type,data,getWorldState=True,getHTNState=True):
+        #this is a new never before seen key. Create an array of entries for it
+        timestamp=time.time()
+        if not type in self.log:
+            self.log[type]=[]
+        self.log[type].append({'data':data,'timestamp':timestamp,'word_state':[],'htn_state':[]})
+        if getWorldState:
+            self.log[type][-1]['word_state']=self.htn.getCurrentWorldState()
+        if getHTNState:
+            self.log[type][-1]['htn_state']=self.htn.getHTNState()
+
+    def save(self):
+        print self.log
+        with open(SAVE_FOLDER+'/'+str(time.time())+'.json', 'a+') as outfile:
+            json.dump(self.log, outfile)
+        self.htn.reset()
 
 with open(ITEMS_FILE) as item_file:    
     items= json.load(item_file)
@@ -185,6 +248,11 @@ if __name__ == '__main__':
     rospy.Subscriber('web_interface/execute_action', WebInterfaceExecuteAction, web.execute_task)
     rospy.Subscriber('web_interface/question_response', WebInterfaceQuestionResponse, web.get_response)
     rospy.Subscriber('object_recognition_listener/recognized_objects', SegmentedObjectList, web.objects_segmented)
+
+    #Call segmenatation
+    segmenatation = rospy.ServiceProxy('/rail_segmentation/segment', EmptySrv)
+    segmenatation()
+
     rospy.spin()
 
 #we're not using ROS pick up the commands from a file

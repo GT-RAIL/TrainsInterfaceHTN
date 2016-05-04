@@ -38,6 +38,7 @@ class Action(object):
         #execution as they might share input
         self.groupedSubtasks=False
 
+
     #we have to copy over the inputs and outputs of each of the subtasks
     def addSubtask(self,subtask):
         #copy the inputs but leave out the specifics of the name       
@@ -59,8 +60,6 @@ class Action(object):
     '''
     def getSlotNames(self):
         output= [] 
-        print self.name
-        print len(self.inputs)
         for input in self.inputs:
             if input.slot_name: 
                 output.append(input.slot_name)
@@ -122,7 +121,7 @@ class Action(object):
         current_input_point=0
         outputs=[]
         for subtask in self.subtasks:
-            if groupedAction.groupedSubtasks:
+            if self.groupedSubtasks:
                 success,reason=subtask.execute(inputs,world)
             else:
                 success,reason=subtask.execute(inputs[current_input_point:current_input_point+len(subtask.inputs)],world)
@@ -149,10 +148,10 @@ class Pickup(Action):
     def execute(self,inputs,world):
         #base failure cases
         if not world.holding == None:
-            return False,"Robot is holding an object"
+            return False,"You cannot pick up when Tablebot is holding an object"
         if inputs[0].manipulable==False:
             return False,"Pick up item not manipulable"
-        inputs[0].manipulable=False
+        
         world.holding=inputs[0]
         # @TODO ROS things to make the actual pick up get called
         return True,inputs[0]
@@ -160,15 +159,18 @@ class Pickup(Action):
 #pick up an item into the robots hands. It outputs the item that it has picked up
 class Store(Action):
     def __init__(self):
-        store_object=Slot('store','Item') 
+        #store an object is only possible if we are holding the object in question
+        store_object=Slot('store','Item',lambda world,input: (True if world.holding.name==input  else False) if world.holding else False) 
         store_container=Slot('store','Container') 
         super(Store,self).__init__('Store','primitive',[store_object,store_container])
 
     def execute(self,inputs,world):
         if not world.holding == inputs[0]:
-            return False,"Robot is not holding that object"
+            return False,"You cannot store when Tablebot is not holding that object"
         world.holding=None
         inputs[1].addItem(inputs[0])
+        inputs[0].manipulable=False
+        inputs[0].inside=inputs[1]
         # @TODO ROS things to make the actual pick up get called
 
         return True,None
@@ -180,11 +182,11 @@ This is the equivalent of the Slot class in DISCO
 It describes the slots in a given action which are filled.
 '''
 class Slot(object):
-    def __init__(self,name,slot_type,slot_name=None):
+    def __init__(self,name,slot_type,criterion=None,slot_name=None):
         self.name=name #examples of input name can be pickup object
         self.type=slot_type #examples of input types can be an item or a container
         self.slot_name=slot_name #if the name is None then it is considered unspecified. When name is specified then it can be compared
-
+        self.criterion=criterion
     #compare this input object with another one to see if they are the same
     #the level gives the level to which you want these 2 slots to be compared. They can be compared with Name, Type and Slot Name
     def compare(self,inputs,level='Name'):

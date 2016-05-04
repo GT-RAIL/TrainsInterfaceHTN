@@ -62,12 +62,21 @@ class World(object):
             return False
 
 
-    def getCurrentWorldState():
+    def getCurrentWorldState(self):
         output={}
         output['available_items']=[]
-        output['robot_holding']=False
-        #TODO
-        pass
+        for item in self.available_items:
+            output['available_items'].append({'name':item.name,'type':item.typeName,'manipulable':item.manipulable})
+
+        output['containers']=[]
+        for container in self.containers:
+            output['containers'].append({'name':container.name,'items':[item.name for item in container.contains]})
+        
+        if(self.holding==None):
+            output['robot_holding']=True
+        else:
+            output['robot_holding']=self.holding.name
+        return output
 
     '''
     This is called when we get a new set of recognized items
@@ -85,16 +94,22 @@ class World(object):
 
     '''
     get objects by type
+    Criterion is a function that checks for any extra criteria you might need. 
+    Pass a function to it
     '''
-    def getObjectsByType(self,type):
+    def getObjectsByType(self,type,criterion=None):
         objects=[]
+        if criterion==None:
+            criterion= lambda world,input : True
         if(type.lower()=='item'):
             for item in self.items:
                 if item.manipulable:
-                    objects.append(item.name)
+                    if(criterion(self,item.name)):
+                        objects.append(item.name)
         elif(type.lower()=='container'):
-            for contatiner in self.containers:
-                objects.append(container.name)
+            for box in self.containers:
+                if(criterion(self,box)):
+                    objects.append(box.name)
         return objects
 
     '''
@@ -109,7 +124,7 @@ class World(object):
                 type=item.typeName
         for item in self.available_items:
             if type==item.typeName and not item.name ==input:
-                alternatives.append(item.name)
+                    alternatives.append(item.name)
         alternatives.append('None. Undo! ')
         return alternatives
 

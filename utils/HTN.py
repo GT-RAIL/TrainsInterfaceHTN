@@ -43,7 +43,7 @@ class HTN(object):
     def getHTNStateRecursive(self,node):
         output={}
         output["name"]=action.name
-        output['slots']=(action.getSlotNames()))  #printing name and slots
+        output['slots']=(action.getSlotNames())  #printing name and slots
         output['focus']=(self.tree[self.currentSubtask].name==action.name)
         output['decompositions']=[]
 
@@ -53,7 +53,7 @@ class HTN(object):
         return output
  
     def getHTNState(self):
-        output={}
+        output=[]
         for i,action in enumerate(self.tree):
             output.append(self.build_htn(action))
         return output
@@ -62,6 +62,8 @@ class HTN(object):
     def addNewTask(self,taskName):
         #this creates a new topic with no inputs or outputs. As subtasks are put under it the number of inputs and outputs should increase
         newTask=Action(taskName) #add this task with no inputs and outputs
+        newTask.inputs=[]
+        newTask.outputs=[]
         self.tree.append(newTask)
         self.currentSubtask=len(self.tree)-1 #change current task to this new task
 
@@ -74,7 +76,7 @@ class HTN(object):
     def getInputsForAction(self,action):
         inputs=[]
         for input in self.actions[action].inputs:
-            inputs.append({'type':input.type,'objects':self.world.getObjectsByType(input.type)})
+            inputs.append({'type':input.type,'objects':self.world.getObjectsByType(input.type,input.criterion)})
         return inputs
 
     #checks if 2 tasks are groupable
@@ -82,29 +84,31 @@ class HTN(object):
     def isGroupable(self,task1,task2,level="Type"):
         #forgive small typos
         level=level.lower()
-        #check that the output sizes match the inputs
-        if(len(task1.outputs)<=len(task2.inputs)):
-            #depending on the level go through each 1 and see if they match
-            for output in task1.outputs:
-                found=False
-                #check if the input is used to fill any other output
-                used= [0] * len(task2.inputs)
-                #go through all inputs for every output
-                for i,input in enumerate(task2.inputs):
-                    #check the type of the slots
-                    if(level=="type"):
-                        if task2.inputs[i].type==output.type and not used[i]:
-                            found=True
-                            used[i]=1
-                    elif(level=="slot name"):
-                        if task2.inputs[i].slot_name==output.slot_name and not used[i]:
-                            found=True
-                            used[i]=1
-                if not found:
-                    return False
-            return True
-        else:
-            return False
+        #check that the output sizes match the inputs & that task 1 has an o/p to connect
+        if len(task1.outputs)>0:
+            if len(task1.outputs)<=len(task2.inputs):
+                #depending on the level go through each 1 and see if they match
+                for output in task1.outputs:
+                    found=False
+                    #check if the input is used to fill any other output
+                    used= [0] * len(task2.inputs)
+                    #go through all inputs for every output
+                    for i,input in enumerate(task2.inputs):
+                        #check the type of the slots
+                        if(level=="type"):
+                            if task2.inputs[i].type==output.type and not used[i]:
+                                found=True
+                                used[i]=1
+                        elif(level=="slot name"):
+                            if task2.inputs[i].slot_name==output.slot_name and not used[i]:
+                                found=True
+                                used[i]=1
+                    if not found:
+                        return False
+                return True
+            else:
+                return False
+        return False
 
     #remove all the slot names recursively from a tree
     def removeSlotNamesRecursive(self,groupedTask):
@@ -131,6 +135,7 @@ class HTN(object):
         subtasks.append(groupedTask)
         #add the new subtasks list in
         self.tree[self.currentSubtask].subtasks=subtasks 
+        print self.tree[self.currentSubtask]
         #reset the input of the top level to be the bottom
         self.tree[self.currentSubtask].inputs=[]
         self.tree[self.currentSubtask].outputs=[]
@@ -179,9 +184,8 @@ class HTN(object):
             #check if the 2 subtasks are groupable
             subtasks=self.tree[self.currentSubtask].subtasks
             isGroupable=False
-            if len(subtasks)>1:
-                
-                if self.isGroupable(subtasks[-2],subtasks[-1]):
+            if len(subtasks)>1:  
+                if self.isGroupable(subtasks[-2],subtasks[-1],"slot name"):
                     isGroupable=True
 
             return True,isGroupable,None
@@ -197,7 +201,7 @@ class HTN(object):
 
     #this saves the current tree to file and then wipes it 
     #also needs to reset the action queue to only primitive actions
-    def save(self):
+    def save(self):        
         pass
 
     '''
@@ -217,14 +221,14 @@ class HTN(object):
         output+= ", \"defined\": \"true\""  #not sure what defined means so I return true here
         output+= ", \"decompositions\": ["
         count=0
-
-        for subtask in action.subtasks:
-            if(count>0):
-                output+=","
-            output+= "{ \"steps\": [" 
-            output+=self.build_htn(subtask)
-            output+=']}'
-            count+=1
+        output+= "{ \"steps\": [" 
+        if not action.groupedSubtasks:
+            for subtask in action.subtasks:
+                if(count>0):
+                    output+=","
+                output+=self.build_htn(subtask)
+                count+=1
+        output+=']}'
         output+=']'
         output+='}'
         return output
