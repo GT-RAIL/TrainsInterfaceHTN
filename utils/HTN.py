@@ -21,6 +21,10 @@ from World import World
 class HTN(object):
 
     def __init__(self,items):
+        self.items=items
+        self.reset()
+
+    def reset(self):
         self.tree=[] #the tree is an array of actions starting from the top and going to the bottom
         self.actionsPerformed=[] #maintains the list of Actions executed so we can undo
         self.actions={} #the set of actions that the user can use 
@@ -31,7 +35,28 @@ class HTN(object):
         store  = Store()
         self.actions={"Pick up":pickup,"Store":store}
 
-        self.world = World(items) #stores the information about the world
+        self.world = World(self.items) #stores the information about the world
+
+    def getCurrentWorldState(self):
+       return self.world.getCurrentWorldState()
+
+    def getHTNStateRecursive(self,node):
+        output={}
+        output["name"]=action.name
+        output['slots']=(action.getSlotNames()))  #printing name and slots
+        output['focus']=(self.tree[self.currentSubtask].name==action.name)
+        output['decompositions']=[]
+
+        for subtask in action.subtasks:
+            output['decompositions'].append(getHTNStateRecursive(subtask))
+
+        return output
+ 
+    def getHTNState(self):
+        output={}
+        for i,action in enumerate(self.tree):
+            output.append(self.build_htn(action))
+        return output
 
     #This will add a new task into the current state of the HTN
     def addNewTask(self,taskName):

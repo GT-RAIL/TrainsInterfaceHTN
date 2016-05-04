@@ -62,6 +62,12 @@ class World(object):
             return False
 
 
+    def getCurrentWorldState():
+        output={}
+        output['available_items']=[]
+        output['robot_holding']=False
+        #TODO
+        pass
 
     '''
     This is called when we get a new set of recognized items
@@ -86,7 +92,7 @@ class World(object):
             for item in self.items:
                 if item.manipulable:
                     objects.append(item.name)
-        elif(type.lower()=='contatiner'):
+        elif(type.lower()=='container'):
             for contatiner in self.containers:
                 objects.append(container.name)
         return objects
