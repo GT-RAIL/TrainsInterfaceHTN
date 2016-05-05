@@ -85,6 +85,8 @@ class World(object):
     '''
     def refreshItems(self,items):
         self.available_items=[]
+        #if(self.holding):
+        #   self.available_items.append(self.holding)
         for recognized_item in items:
             for item in self.items:
                 # At this point o will have a numeric id at the end of its name if
@@ -137,7 +139,11 @@ class World(object):
     # @return whether or not making a slot is possible
     def makeSlot(self,input,action_inputs):
         #check if it is an item or container
-        for item in self.available_items:
+        available_items=[]
+        available_items.extend(self.available_items)
+        if not self.holding==None:
+            available_items.append(self.holding)
+        for item in available_items:
             if self.compare(input,item.name):
                 for action_input in action_inputs:
                     if action_input.slot_name==None and action_input.type=='Item':

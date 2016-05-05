@@ -23,7 +23,7 @@ from rail_user_queue_manager.msg import Queue
 from heres_how_msgs.srv import WebInterfaceActionInputs,WebInterfaceActions
 from heres_how_msgs.msg import WebInterfaceButton,WebInterfaceInput,WebInterfaceExecuteAction,WebInterfaceQuestion,WebInterfaceQuestionResponse
 from rail_manipulation_msgs.msg import SegmentedObjectList
-from std_msgs.msg import Empty,String
+from std_msgs.msg import Empty,String,Bool
 from std_srvs.srv import Empty as EmptySrv
 from rospkg import RosPack
 
@@ -65,10 +65,13 @@ class Object(object):
 class WebInterface(object):
     def __init__(self,items):
 
-        self.client = actionlib.SimpleActionClient('/web_interface/execute_primitve_action', ExecuteAction)
+        self.client = actionlib.SimpleActionClient('/web_interface/execute_primitive_action', ExecuteAction)
         self.client.wait_for_server()
 
         self.htn=HTN(items,self.client);
+
+        # Topic to reenable user interface 
+        self.htnUserFeedbackTopic=rospy.Publisher("web_interface/execute_action_feedback", Bool,queue_size=10)
 
         #this is the topic used to send the current state of the HTN to the user
         self.htnDisplayTopic=rospy.Publisher("web_interface/htn", String,queue_size=10)
@@ -152,6 +155,8 @@ class WebInterface(object):
             'taskName':taskName,
 
         })        
+
+        self.htnUserFeedbackTopic.publish(Bool(True))
 
         if LOGGING:
             print self.htn.display()
