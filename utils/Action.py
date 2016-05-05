@@ -16,6 +16,16 @@ __license__ = 'BSD'
 
 import copy
 
+import roslib; roslib.load_manifest('tablebot_heres_how_action_executor')
+# Brings in the SimpleActionClient
+import actionlib
+#import tablebot_heres_how_action_executor
+# Brings in the messages used by the fibonacci action, including the
+# goal message and the result message.
+from tablebot_heres_how_action_executor.msg import  ExecuteGoal,ExecuteAction
+from std_msgs.msg import Empty,String
+
+
 class Action(object):
 
     def __init__(self, name, task_type='primitive', inputs=[],outputs=[]):
@@ -122,10 +132,19 @@ class Action(object):
         outputs=[]
         for subtask in self.subtasks:
             if self.groupedSubtasks:
+                for i,input in enumerate(self.inputs):
+                    if(i<len(subtask.inputs)):
+                        subtask.inputs[i].slot_name=self.inputs[i].name
                 success,reason=subtask.execute(inputs,world)
             else:
-                success,reason=subtask.execute(inputs[current_input_point:current_input_point+len(subtask.inputs)],world)
+                sub_inputs=inputs[current_input_point:current_input_point+len(subtask.inputs)]
+                for i,input in enumerate(sub_inputs):
+                    if(i<len(subtask.inputs)):
+                        subtask.inputs[i].slot_name=sub_inputs[i].name
+                success,reason=subtask.execute(sub_inputs,world)
+
             current_input_point+=len(subtask.inputs)
+
             #if any one fails then the whole thing fails
             #TODO probably need to run an undo or something on the physical side
             if not success:
@@ -133,7 +152,7 @@ class Action(object):
             elif reason:
                 outputs.append(reason)
         #if its just one make that the output
-        if(len(outputs)<2):
+        if(len(outputs)<2 and len(outputs)>0):
             outputs=outputs[0]
     	return True,reason
 
@@ -150,9 +169,27 @@ class Pickup(Action):
         if not world.holding == None:
             return False,"You cannot pick up when Tablebot is holding an object"
         if inputs[0].manipulable==False:
-            return False,"Pick up item not manipulable"
+            return False,inputs[0].name+" item is not manipulable. (You cannot pick up items in the lunchbox)"
         
-        world.holding=inputs[0]
+        # Waits until the action server has started up and started
+        # listening for goals.
+         # client.wait_for_server() 
+        # Creates a goal to send to the action server.
+        goal = [String(input.name) for input in inputs]
+        message=ExecuteGoal(action =String(self.name),inputs=goal)
+         # Sends the goal to the action server.
+        world.client.send_goal(message)
+     
+        # Waits for the server to finish performing the action.
+        world.client.wait_for_result()
+     
+        # Prints out the result of executing the action
+        if world.client.get_result().success:
+            self.inputs[0].slot_name=inputs[0].name
+            self.outputs[0].slot_name=inputs[0].name
+            world.holding=inputs[0]
+        else :
+            return False,"Sorry. We think that we failed to pick the object up. Please try again"
         # @TODO ROS things to make the actual pick up get called
         return True,inputs[0]
 
@@ -162,18 +199,36 @@ class Store(Action):
         #store an object is only possible if we are holding the object in question
         store_object=Slot('store','Item',lambda world,input: (True if world.holding.name==input  else False) if world.holding else False) 
         store_container=Slot('store','Container') 
+        
         super(Store,self).__init__('Store','primitive',[store_object,store_container])
 
     def execute(self,inputs,world):
         if not world.holding == inputs[0]:
             return False,"You cannot store when Tablebot is not holding that object"
-        world.holding=None
-        inputs[1].addItem(inputs[0])
-        inputs[0].manipulable=False
-        inputs[0].inside=inputs[1]
+
+        goal = [String(input.name) for input in inputs]
+        message=ExecuteGoal(action =String(self.name),inputs=goal)
+         # Sends the goal to the action server.
+        world.client.send_goal(message)
+     
+        # Waits for the server to finish performing the action.
+        world.client.wait_for_result()
+     
+        # Prints out the result of executing the action
+        if world.client.get_result().success:
+            world.holding=None
+            inputs[1].addItem(inputs[0])
+            inputs[0].manipulable=False
+            inputs[0].inside=inputs[1]
+            self.inputs[0].slot_name=inputs[0].name
+            self.inputs[1].slot_name=inputs[1].name
+            return True,None
+        else:
+            return False,"Sorry. That may not have got stored properly. Please try again"
+
         # @TODO ROS things to make the actual pick up get called
 
-        return True,None
+        
 
 
 

@@ -27,6 +27,14 @@ from std_msgs.msg import Empty,String
 from std_srvs.srv import Empty as EmptySrv
 from rospkg import RosPack
 
+import roslib; roslib.load_manifest('tablebot_heres_how_action_executor')
+# Brings in the SimpleActionClient
+import actionlib
+#import tablebot_heres_how_action_executor
+# Brings in the messages used by the fibonacci action, including the
+# goal message and the result message.
+from tablebot_heres_how_action_executor.msg import  ExecuteGoal,ExecuteAction
+
 import json
 import time
 import HTMLParser
@@ -57,7 +65,10 @@ class Object(object):
 class WebInterface(object):
     def __init__(self,items):
 
-        self.htn=HTN(items);
+        self.client = actionlib.SimpleActionClient('/web_interface/execute_primitve_action', ExecuteAction)
+        self.client.wait_for_server()
+
+        self.htn=HTN(items,self.client);
 
         #this is the topic used to send the current state of the HTN to the user
         self.htnDisplayTopic=rospy.Publisher("web_interface/htn", String,queue_size=10)
@@ -79,18 +90,31 @@ class WebInterface(object):
         if(message.button=='teachNewTask'):
             if LOGGING:
                 print("Executing teach new task")
-            self.htn.addNewTask(message.parameters[0])
-            if LOGGING:
-                print self.htn.display()
-            self.htnDisplayTopic.publish(self.htn.display())
+            #if adding is successful
+            if not self.htn.addNewTask(message.parameters[0]):
+                self.ask_question({'question':'That Task Name is already in use. Please pick a different one','answers':[]})
+            else:
+                if LOGGING:
+                    print self.htn.display()
+
+                self.write_log('task start',{
+                    'taskName':message.parameters[0]
+                })     
+                self.htnDisplayTopic.publish(self.htn.display())
         #this refers to completing of a subtask.
-        elif(message.button=='TaskComplete'):
+        elif(message.button=='taskComplete'):
+            self.write_log('task complete',{
+                'taskName':self.htn.tree[self.htn.currentSubtask].name
+            })     
             self.htn.saveCurrentSubtask()
         #undo's current task
         elif(message.button=='undo'):
             pass
         #saves 
         elif(message.button=='finishTask'):
+            self.write_log('end',{
+                'taskName':self.self.htn.tree[self.htn.currentSubtask].name
+            })     
             self.save()
         #an update calls the display function which sends the HTN as it stands to ROS
         elif(message.button=='updateHTN'):
@@ -125,7 +149,8 @@ class WebInterface(object):
         #add something to the log
         self.write_log('execute',{
             'inputs':message.inputs,
-            'taskName':taskName
+            'taskName':taskName,
+
         })        
 
         if LOGGING:
@@ -154,9 +179,7 @@ class WebInterface(object):
                 if(answer.lower()=='yes'):
                     self.htn.groupLastTasks()
             elif self.currentQuestion['name']=='Substitution':
-                if(answer.lower()=="none! undo"):
-                    self.undo()
-                else:            
+                if not (answer.lower()=="none. undo!" or answer.lower()=='no alternatives detected, okay.'):
                     inputs=self.currentQuestion['message'].inputs
                     new_items = [answer if x==self.currentQuestion['failed_input'] else x for x in inputs]
                     self.currentQuestion['message'].inputs=new_items
@@ -164,7 +187,7 @@ class WebInterface(object):
 
             self.htnDisplayTopic.publish(self.htn.display())
             #add something to the log
-            self.write_log(self,'question',{
+            self.write_log('question',{
                 'question':self.currentQuestion['name'],
                 'options':self.currentQuestion['options'],
                 'answer':answer
@@ -233,22 +256,23 @@ class WebInterface(object):
         print self.log
         with open(SAVE_FOLDER+'/'+str(time.time())+'.json', 'a+') as outfile:
             json.dump(self.log, outfile)
+        segmenatation = rospy.ServiceProxy('/rail_segmentation/segment', EmptySrv)
+        segmenatation()
+
         self.htn.reset()
 
-with open(ITEMS_FILE) as item_file:    
-    items= json.load(item_file)
-    web=WebInterface(items)
 
-if __name__ == '__main__':
-    
+if __name__ == '__main__':   
     rospy.init_node('trains_htn_planner', anonymous=False)
-    rospy.Subscriber("web_interface/button", WebInterfaceButton,web.button_clicked)
-    rospy.Service('web_interface/action_inputs', WebInterfaceActionInputs, web.action_inputs)
-    rospy.Service('web_interface/actions', WebInterfaceActions, web.actions)
-    rospy.Subscriber('web_interface/execute_action', WebInterfaceExecuteAction, web.execute_task)
-    rospy.Subscriber('web_interface/question_response', WebInterfaceQuestionResponse, web.get_response)
-    rospy.Subscriber('object_recognition_listener/recognized_objects', SegmentedObjectList, web.objects_segmented)
-
+    with open(ITEMS_FILE) as item_file:    
+        items= json.load(item_file)
+        web=WebInterface(items)
+        rospy.Subscriber("web_interface/button", WebInterfaceButton,web.button_clicked)
+        rospy.Service('web_interface/action_inputs', WebInterfaceActionInputs, web.action_inputs)
+        rospy.Service('web_interface/actions', WebInterfaceActions, web.actions)
+        rospy.Subscriber('web_interface/execute_action', WebInterfaceExecuteAction, web.execute_task)
+        rospy.Subscriber('web_interface/question_response', WebInterfaceQuestionResponse, web.get_response)
+        rospy.Subscriber('object_recognition_listener/recognized_objects', SegmentedObjectList, web.objects_segmented)
     #Call segmenatation
     segmenatation = rospy.ServiceProxy('/rail_segmentation/segment', EmptySrv)
     segmenatation()

@@ -20,11 +20,11 @@ from Item import Item
 from World import World
 class HTN(object):
 
-    def __init__(self,items):
+    def __init__(self,items,client):
         self.items=items
-        self.reset()
+        self.reset(client)
 
-    def reset(self):
+    def reset(self,client):
         self.tree=[] #the tree is an array of actions starting from the top and going to the bottom
         self.actionsPerformed=[] #maintains the list of Actions executed so we can undo
         self.actions={} #the set of actions that the user can use 
@@ -35,7 +35,7 @@ class HTN(object):
         store  = Store()
         self.actions={"Pick up":pickup,"Store":store}
 
-        self.world = World(self.items) #stores the information about the world
+        self.world = World(self.items,client) #stores the information about the world
 
     def getCurrentWorldState(self):
        return self.world.getCurrentWorldState()
@@ -61,11 +61,15 @@ class HTN(object):
     #This will add a new task into the current state of the HTN
     def addNewTask(self,taskName):
         #this creates a new topic with no inputs or outputs. As subtasks are put under it the number of inputs and outputs should increase
-        newTask=Action(taskName) #add this task with no inputs and outputs
-        newTask.inputs=[]
-        newTask.outputs=[]
-        self.tree.append(newTask)
-        self.currentSubtask=len(self.tree)-1 #change current task to this new task
+        if taskName not in [x.name for x in self.tree]:
+            newTask=Action(taskName) #add this task with no inputs and outputs
+            newTask.inputs=[]
+            newTask.outputs=[]
+            self.tree.append(newTask)
+            self.currentSubtask=len(self.tree)-1 #change current task to this new task
+            return True
+        else:
+            return False
 
     #get all the actions for a particular type
     def getActions(self,type):
@@ -196,8 +200,11 @@ class HTN(object):
     #ending a subtask. Over here we add this task to the complex actions
     def saveCurrentSubtask(self):
         #self.actions.append()
-        action= removeSlotNamesRecursive(self.tree[self.currentSubtask])
-        self.actions.append(action)
+        action= self.removeSlotNamesRecursive(self.tree[self.currentSubtask])
+        action.type='learned'
+        self.actions[action.name]=action
+
+        print self.actions
 
     #this saves the current tree to file and then wipes it 
     #also needs to reset the action queue to only primitive actions

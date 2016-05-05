@@ -12,7 +12,7 @@ from Item import Item
 from Action import Slot
 
 class World(object):
-    def __init__(self,items):
+    def __init__(self,items,client):
         # Item specification for initialization 
         self.itemSpec = items['items']
 
@@ -22,6 +22,7 @@ class World(object):
         # A list of all containers (assumed to be non-manipulable)
         self.numContainers = 2
         self.containers = []
+        self.client=client
 
         # Initialize containers
         for container in items['containers']:
@@ -125,7 +126,10 @@ class World(object):
         for item in self.available_items:
             if type==item.typeName and not item.name ==input:
                     alternatives.append(item.name)
-        alternatives.append('None. Undo! ')
+        if(len(alternatives)>0):
+            alternatives.append('None. Undo!')
+        else:
+            alternatives.append('No alternatives detected, Okay.')
         return alternatives
 
 
