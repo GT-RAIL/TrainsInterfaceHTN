@@ -26,7 +26,7 @@ from rail_manipulation_msgs.msg import SegmentedObjectList
 from std_msgs.msg import Empty,String
 from std_srvs.srv import Empty as EmptySrv
 from rospkg import RosPack
-
+import copy
 import roslib; roslib.load_manifest('tablebot_heres_how_action_executor')
 # Brings in the SimpleActionClient
 import actionlib
@@ -109,11 +109,12 @@ class WebInterface(object):
             self.htn.saveCurrentSubtask()
         #undo's current task
         elif(message.button=='undo'):
-            pass
+            #check if we are executing something
+            self.undo()
         #saves 
         elif(message.button=='finishTask'):
             self.write_log('end',{
-                'taskName':self.self.htn.tree[self.htn.currentSubtask].name
+                'taskName':self.htn.tree[self.htn.currentSubtask].name
             })     
             self.save()
         #an update calls the display function which sends the HTN as it stands to ROS
@@ -121,7 +122,7 @@ class WebInterface(object):
             if LOGGING:
                 print self.htn.display()
             self.htnDisplayTopic.publish(self.htn.display())
-        self.htnAtTimeStep.append(self.htn.getHTNState())
+        self.htnAtTimeStep.append(copy.deepcopy(self.htn.tree))
 
     #ROS topic for receiving executed actions with an array of inputs
     def execute_task(self,message):
@@ -135,7 +136,7 @@ class WebInterface(object):
             #one or more of the inputs might have failed to register
             alternatives=self.htn.world.findAlternatives(errorInfo['failed_input'])
             self.currentQuestion={'name':'Substitution','message':message,'failed_input':errorInfo['failed_input'],'options':alternatives}
-            self.ask_question({'question':errorInfo['failed_input']+' could not be found. Would you instead like to try','answers':alternatives})
+            self.ask_question({'question':'Substitution: '+errorInfo['failed_input']+' could not be found. Would you instead like to try','answers':alternatives})
         elif(isGroupable):
             self.currentQuestion={'name':'Grouping','options':['yes','no']}
             self.ask_question({'question':'Do you wish to group the last 2 subtasks into a single task?','answers':['Yes','No']})
@@ -144,7 +145,7 @@ class WebInterface(object):
             self.ask_question({'question':str(errorInfo['reason']),'answers':[]})
 
         self.htnDisplayTopic.publish(self.htn.display())
-        self.htnAtTimeStep.append(self.htn.getHTNState())
+        self.htnAtTimeStep.append(copy.deepcopy(self.htn.tree))
 
         #add something to the log
         self.write_log('execute',{
@@ -199,7 +200,7 @@ class WebInterface(object):
 
     def undo(self):
         if len(self.htnAtTimeStep)>1:
-            self.htn=self.htnAtTimeStep();
+            self.htn.tree=self.htnAtTimeStep[-1];
 
     #get all the actions in a particular type
     def actions(self,request):
