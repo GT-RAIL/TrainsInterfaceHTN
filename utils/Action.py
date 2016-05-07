@@ -182,12 +182,12 @@ class Pickup(Action):
      
         # Waits for the server to finish performing the action.
         world.client.wait_for_result()
-     
         # Prints out the result of executing the action
         if world.client.get_result().success:
             self.inputs[0].slot_name=inputs[0].name
             self.outputs[0].slot_name=inputs[0].name
             world.holding=inputs[0]
+            print world.holding
         else :
             return False,"Sorry. We think that we failed to pick the object up. Please try again"
         # @TODO ROS things to make the actual pick up get called
@@ -203,7 +203,11 @@ class Store(Action):
         super(Store,self).__init__('Store','primitive',[store_object,store_container])
 
     def execute(self,inputs,world):
-        if not world.holding == inputs[0]:
+        if world.holding == None:
+            return False,"The robot is not holding anything"
+        if not inputs or len(inputs) == 0:
+            return False,"There is not input"
+        if not world.holding.name == inputs[0].name:
             return False,"You cannot store when Tablebot is not holding that object"
 
         goal = [String(input.name) for input in inputs]
