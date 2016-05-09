@@ -163,13 +163,13 @@ class WebInterface(object):
             #add all the subtasks to the current task as primitive task till subtask
             self.htn.addNonPrimitiveTaskAsPrimitive(action,inputs,errorInfo['subtask'])
             self.ask_question({'question':'Partial Completion Warning: Some or all of the steps of a Learned Action were completed. If the robot is in the middle of a task, please complete it with the Basic Actions','answers':[]})
-        elif(isGroupable):
-            self.currentQuestion={'name':'Grouping','options':['yes','no']}
-            self.ask_question({'question':'Do you wish to group the last 2 subtasks into a single task?','answers':['Yes','No']})
         elif(not success):
             #If this failed on a store, check if the robot hand still has an object 
             #points out why the user failed to run the task. ask to retry TODO
             self.ask_question({'question':str(errorInfo['reason']),'answers':[]})
+        elif(isGroupable):
+            self.currentQuestion={'name':'Grouping','options':['yes','no']}
+            self.ask_question({'question':'Do you wish to group the last 2 subtasks into a single task?','answers':['Yes','No']})
 
         if success:
             self.htnAtTimeStep.append({'tree':copy.deepcopy(self.htn.tree),'holding':copy.deepcopy(self.htn.world.holding)})
@@ -210,7 +210,7 @@ class WebInterface(object):
                 if(answer.lower()=='yes'):
                     self.htn.groupLastTasks()
                     #if we are grouping tasks, task tree changed log it
-                    self.htnAtTimeStep.append({'tree':copy.deepcopy(self.htn.tree),'holding':copy.deepcopy(self.htn.world.holding)})
+                    #self.htnAtTimeStep.append({'tree':copy.deepcopy(self.htn.tree),'holding':copy.deepcopy(self.htn.world.holding)})
             elif self.currentQuestion['name']=='Substitution':
                 if not (answer.lower()=="none. undo!" or answer.lower()=='no alternatives detected, okay.'):
                     inputs=self.currentQuestion['message'].inputs
@@ -235,7 +235,7 @@ class WebInterface(object):
         print "undo"
         if len(self.htnAtTimeStep)>1:
             #check if the action he has taken has not created a new task
-            if len(self.htn.tree) == len(self.htnAtTimeStep[-1]['tree']):
+            if len(self.htnAtTimeStep[-2]['tree'] == len(self.htnAtTimeStep[-1]['tree']):
                 #pop the HTN at the last timestep
                 self.htnAtTimeStep.pop()
                 #then set the previous one to the current tree
@@ -247,7 +247,7 @@ class WebInterface(object):
             else:
                 self.ask_question({'question':"You cannot undo the creation of a new task.",'answers':[]})
         else:
-            self.ask_question({'question':"You cannot remove from the task tree without a task.",'answers':[]})
+            self.ask_question({'question':"You cannot undo at this point.",'answers':[]})
 
     #get all the actions in a particular type
     def actions(self,request):

@@ -162,14 +162,14 @@ class HTN(object):
     def groupLastTasks(self):
         #get the last 2 tasks
         subtasks=self.tree[self.currentSubtask].subtasks
-        name=subtasks[-1].name+" & "+subtasks[-2].name
-
-        if self.actions[subtasks[-1].name+" & "+subtasks[-2].name]:
+        name=subtasks[-2].name+" & "+subtasks[-1].name
+        print name
+        if self.actions.get(subtasks[-1].name+" & "+subtasks[-2].name):
             i=1
-            while self.actions[name+str(i)]:
+            while self.actions.get(name+str(i)):
                 i+=1
                 #group and keep even the slot names
-            groupedTask=(subtasks[-2]).groupWith(subtasks[-1],subtasks[-1].name+" & "+subtasks[-2].name+i)
+            groupedTask=(subtasks[-2]).groupWith(subtasks[-1],name+str(i))
         else:
             #group and keep even the slot names
             groupedTask=(subtasks[-2]).groupWith(subtasks[-1])    

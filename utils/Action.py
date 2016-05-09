@@ -182,7 +182,7 @@ class Pickup(Action):
         
         # Waits until the action server has started up and started
         # listening for goals.
-        client.wait_for_server() 
+
         # Creates a goal to send to the action server.
         goal = [String(input.name) for input in inputs]
         message=ExecuteGoal(action =String(self.name),inputs=goal)
@@ -195,10 +195,11 @@ class Pickup(Action):
 
 
         if world.client.get_result().success:
-            return False,"Sorry. We think that we failed to pick the object up. Please try again"
-        else:
             world.holding=inputs[0]
-            return True,inputs[0]
+            return True,inputs[0]            
+        else:
+            return False,"Sorry. We think that we failed to pick the object up. Please try again"
+
 
     def setSlots(self,inputs,outputs):
         self.inputs[0].slot_name=inputs[0].name
