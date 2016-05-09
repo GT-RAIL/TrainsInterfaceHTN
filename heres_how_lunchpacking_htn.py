@@ -64,7 +64,7 @@ class Object(object):
 '''
 class WebInterface(object):
     def __init__(self,items):
-
+        
         self.client = actionlib.SimpleActionClient('/web_interface/execute_primitive_action', ExecuteAction)
         self.client.wait_for_server()
 
@@ -90,6 +90,7 @@ class WebInterface(object):
 
     #this is run when a particular button is clicked on the Web Interface
     def button_clicked(self,message):
+        
         if(message.button=='teachNewTask'):
             if LOGGING:
                 print("Executing teach new task")
@@ -103,7 +104,14 @@ class WebInterface(object):
                 self.write_log('task start',{
                     'taskName':message.parameters[0]
                 })     
+                self.htnAtTimeStep.append({'tree':copy.deepcopy(self.htn.tree),'holding':copy.deepcopy(self.htn.world.holding)})
                 self.htnDisplayTopic.publish(self.htn.display())
+        elif(message.button=='start'):
+            self.htn.reset()
+            self.write_log('user',{
+                'id':message.parameters[0]
+            })     
+            self.htnDisplayTopic.publish(self.htn.display())            
         #this refers to completing of a subtask.
         elif(message.button=='taskComplete'):
             self.write_log('task complete',{
@@ -119,13 +127,14 @@ class WebInterface(object):
             self.write_log('end',{
                 'taskName':self.htn.tree[self.htn.currentSubtask].name
             })     
+            self.htn.reset()
             self.save()
         #an update calls the display function which sends the HTN as it stands to ROS
         elif(message.button=='updateHTN'):
             if LOGGING:
                 print self.htn.display()
             self.htnDisplayTopic.publish(self.htn.display())
-        self.htnAtTimeStep.append(copy.deepcopy(self.htn.tree))
+        
 
     #ROS topic for receiving executed actions with an array of inputs
     def execute_task(self,message):
@@ -140,6 +149,11 @@ class WebInterface(object):
             alternatives=self.htn.world.findAlternatives(errorInfo['failed_input'])
             self.currentQuestion={'name':'Substitution','message':message,'failed_input':errorInfo['failed_input'],'options':alternatives}
             self.ask_question({'question':'Substitution: '+errorInfo['failed_input']+' could not be found. Would you instead like to try','answers':alternatives})
+        #if there is an error about group add all the primitive actions we have done and tell the user
+        elif((not success) and errorInfo['reason']=='subtask fail'):
+            action = self.getTaskByName(taskName)
+            self.currentQuestion={'name':'Substitution','message':message,'failed_input':errorInfo['failed_input'],'options':alternatives}
+            self.ask_question({'question':'Substitution: '+errorInfo['failed_input']+' could not be found. Would you instead like to try','answers':alternatives})            
         elif(isGroupable):
             self.currentQuestion={'name':'Grouping','options':['yes','no']}
             self.ask_question({'question':'Do you wish to group the last 2 subtasks into a single task?','answers':['Yes','No']})
@@ -147,9 +161,10 @@ class WebInterface(object):
             #This is not a question as it has no answers but it does point out why the user failed to run the task
             self.ask_question({'question':str(errorInfo['reason']),'answers':[]})
 
-        self.htnDisplayTopic.publish(self.htn.display())
-        self.htnAtTimeStep.append(copy.deepcopy(self.htn.tree))
+        if success:
+            self.htnAtTimeStep.append({'tree':copy.deepcopy(self.htn.tree),'holding':copy.deepcopy(self.htn.world.holding)})
 
+        self.htnDisplayTopic.publish(self.htn.display())
         #add something to the log
         self.write_log('execute',{
             'inputs':message.inputs,
@@ -184,6 +199,8 @@ class WebInterface(object):
             if self.currentQuestion['name']=='Grouping':
                 if(answer.lower()=='yes'):
                     self.htn.groupLastTasks()
+                    #if we are grouping tasks, task tree changed log it
+                    self.htnAtTimeStep.append({'tree':copy.deepcopy(self.htn.tree),'holding':copy.deepcopy(self.htn.world.holding)})
             elif self.currentQuestion['name']=='Substitution':
                 if not (answer.lower()=="none. undo!" or answer.lower()=='no alternatives detected, okay.'):
                     inputs=self.currentQuestion['message'].inputs
@@ -200,12 +217,27 @@ class WebInterface(object):
             })
 
         #save your response from HTN
-        self.htnAtTimeStep.append(self.htn.getHTNState())
         self.currentQuestion=None
 
+    #takes the HTN to how we saw it in the last time it was recorded
+    #TODO Deal With the World
     def undo(self):
+        print "undo"
         if len(self.htnAtTimeStep)>1:
-            self.htn.tree=self.htnAtTimeStep[-1];
+            #check if the action he has taken has not created a new task
+            if len(self.htn.tree) == len(self.htnAtTimeStep[-1]['tree']):
+                #pop the HTN at the last timestep
+                self.htnAtTimeStep.pop()
+                #then set the previous one to the current tree
+                self.htn.tree=self.htnAtTimeStep[-1]['tree'];
+                #release the gripper
+                self.htn.world.holding=self.htnAtTimeStep[-1]['holding']
+                #when undoing we should open th gripper
+                self.htnDisplayTopic.publish(self.htn.display())
+            else:
+                self.ask_question({'question':"You cannot undo the creation of a new task.",'answers':[]})
+        else:
+            self.ask_question({'question':"You cannot remove from the task tree without a task.",'answers':[]})
 
     #get all the actions in a particular type
     def actions(self,request):
@@ -228,7 +260,7 @@ class WebInterface(object):
     def action_inputs(self,request):
         request.action=HTMLParser.HTMLParser().unescape(request.action)
         print request.action
-        inputs=self.htn.getInputsForAction(request.action)       
+        inputs=self.htn.getInputsForAction(request.action)      
         result={}
         result['inputs']=[]
 
@@ -271,18 +303,22 @@ class WebInterface(object):
 if __name__ == '__main__':   
     rospy.init_node('trains_htn_planner', anonymous=False)
     with open(ITEMS_FILE) as item_file:    
+
         items= json.load(item_file)
         web=WebInterface(items)
+
         rospy.Subscriber("web_interface/button", WebInterfaceButton,web.button_clicked)
         rospy.Service('web_interface/action_inputs', WebInterfaceActionInputs, web.action_inputs)
         rospy.Service('web_interface/actions', WebInterfaceActions, web.actions)
         rospy.Subscriber('web_interface/execute_action', WebInterfaceExecuteAction, web.execute_task)
         rospy.Subscriber('web_interface/question_response', WebInterfaceQuestionResponse, web.get_response)
         rospy.Subscriber('object_recognition_listener/recognized_objects', SegmentedObjectList, web.objects_segmented)
+
+    print "Started"
     #Call segmenatation
     segmenatation = rospy.ServiceProxy('/rail_segmentation/segment', EmptySrv)
     segmenatation()
-
+    print "Segmentation Done"
     rospy.spin()
 
 #we're not using ROS pick up the commands from a file

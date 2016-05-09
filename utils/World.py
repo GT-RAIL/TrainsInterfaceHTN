@@ -106,9 +106,9 @@ class World(object):
             criterion= lambda world,input : True
         if(type.lower()=='item'):
             for item in self.items:
-                if item.manipulable:
-                    if(criterion(self,item.name)):
-                        objects.append(item.name)
+                # if item.manipulable:
+                if(criterion(self,item.name)):
+                    objects.append(item.name)
         elif(type.lower()=='container'):
             for box in self.containers:
                 if(criterion(self,box)):

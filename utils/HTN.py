@@ -77,6 +77,13 @@ class HTN(object):
         actions={i: value for i,value in self.actions.iteritems() if value.type==type}
         return actions
 
+    def getActionByName(self,name):
+        task=None
+        for item in self.tree:
+            if item.name==name:
+                task=item
+        return task
+
     def getInputsForAction(self,action):
         inputs=[]
         for input in self.actions[action].inputs:
@@ -180,7 +187,12 @@ class HTN(object):
             #execute the task
             success,reason=action.execute(final_input,self.world)
             if not success:
-                return False,False,{'reason':reason}
+                #if compound figure out which action has failed
+                #it is returned from class Action as an Object as HTN will not contain those details
+                if not action.type=='primitive':
+                    return False,False,reason
+                else:
+                    return False,False,{'reason':reason}
             
             #add the task to the current task that is highlighted-
             self.tree[self.currentSubtask].addSubtask(action)

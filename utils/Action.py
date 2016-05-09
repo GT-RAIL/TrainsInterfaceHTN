@@ -126,10 +126,10 @@ class Action(object):
     @return success,info required
     '''
     def execute(self,inputs,world):
-        #execute the subtasks with part of the input 
-        #unless grouped then all subtasks share input
         current_input_point=0
         outputs=[]
+        #execute the subtasks with part of the input 
+        #unless grouped then all subtasks share input
         for subtask in self.subtasks:
             if self.groupedSubtasks:
                 for i,input in enumerate(self.inputs):
@@ -137,6 +137,7 @@ class Action(object):
                         subtask.inputs[i].slot_name=self.inputs[i].name
                 success,reason=subtask.execute(inputs,world)
             else:
+                #split all the input
                 sub_inputs=inputs[current_input_point:current_input_point+len(subtask.inputs)]
                 for i,input in enumerate(sub_inputs):
                     if(i<len(subtask.inputs)):
@@ -146,9 +147,10 @@ class Action(object):
             current_input_point+=len(subtask.inputs)
 
             #if any one fails then the whole thing fails
+            #return which subtask has failed
             #TODO probably need to run an undo or something on the physical side
             if not success:
-                return success,reason
+                return success,{'reason':'subtask fail','subtask':subtask}
             elif reason:
                 outputs.append(reason)
         #if its just one make that the output
@@ -168,22 +170,22 @@ class Pickup(Action):
         #base failure cases
         if not world.holding == None:
             return False,"You cannot pick up when Tablebot is holding an object"
-        if inputs[0].manipulable==False:
-            return False,inputs[0].name+" item is not manipulable. (You cannot pick up items in the lunchbox)"
+        #if inputs[0].manipulable==False:
+        #    return False,inputs[0].name+" item is not manipulable. (You cannot pick up items in the lunchbox)"
         
         # Waits until the action server has started up and started
         # listening for goals.
          # client.wait_for_server() 
         # Creates a goal to send to the action server.
-        goal = [String(input.name) for input in inputs]
-        message=ExecuteGoal(action =String(self.name),inputs=goal)
+        #goal = [String(input.name) for input in inputs]
+        #message=ExecuteGoal(action =String(self.name),inputs=goal)
          # Sends the goal to the action server.
-        world.client.send_goal(message)
+        #world.client.send_goal(message)
      
         # Waits for the server to finish performing the action.
-        world.client.wait_for_result()
+        #world.client.wait_for_result()
         # Prints out the result of executing the action
-        if world.client.get_result().success:
+        if True:
             self.inputs[0].slot_name=inputs[0].name
             self.outputs[0].slot_name=inputs[0].name
             world.holding=inputs[0]
@@ -210,16 +212,16 @@ class Store(Action):
         if not world.holding.name == inputs[0].name:
             return False,"You cannot store when Tablebot is not holding that object"
 
-        goal = [String(input.name) for input in inputs]
-        message=ExecuteGoal(action =String(self.name),inputs=goal)
-         # Sends the goal to the action server.
-        world.client.send_goal(message)
+        # goal = [String(input.name) for input in inputs]
+        # message=ExecuteGoal(action =String(self.name),inputs=goal)
+        #  # Sends the goal to the action server.
+        # world.client.send_goal(message)
      
-        # Waits for the server to finish performing the action.
-        world.client.wait_for_result()
+        # # Waits for the server to finish performing the action.
+        # world.client.wait_for_result()
      
         # Prints out the result of executing the action
-        if world.client.get_result().success:
+        if True:
             world.holding=None
             inputs[1].addItem(inputs[0])
             inputs[0].manipulable=False
