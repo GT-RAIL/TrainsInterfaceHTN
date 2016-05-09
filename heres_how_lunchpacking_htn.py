@@ -77,6 +77,11 @@ class WebInterface(object):
         self.htnDisplayTopic=rospy.Publisher("web_interface/htn", String,queue_size=10)
 
         self.questionTopic=rospy.Publisher("web_interface/question", WebInterfaceQuestion,queue_size=1)
+
+
+        self.segmenatation = rospy.ServiceProxy('/rail_segmentation/segment', EmptySrv)
+    
+
         #Are we asking a question
         #Currently only Grouping supported but we may have to add teach new task
         self.currentQuestion=None
@@ -90,7 +95,7 @@ class WebInterface(object):
 
     #this is run when a particular button is clicked on the Web Interface
     def button_clicked(self,message):
-        
+        print message
         if(message.button=='teachNewTask'):
             if LOGGING:
                 print("Executing teach new task")
@@ -106,12 +111,15 @@ class WebInterface(object):
                 })     
                 self.htnAtTimeStep.append({'tree':copy.deepcopy(self.htn.tree),'holding':copy.deepcopy(self.htn.world.holding)})
                 self.htnDisplayTopic.publish(self.htn.display())
+                self.segmenatation()     
         elif(message.button=='start'):
-            self.htn.reset()
+            self.htn.reset(self.client)
             self.write_log('user',{
                 'id':message.parameters[0]
             })     
-            self.htnDisplayTopic.publish(self.htn.display())            
+
+            self.htnDisplayTopic.publish(self.htn.display())      
+            self.segmenatation()     
         #this refers to completing of a subtask.
         elif(message.button=='taskComplete'):
             self.write_log('task complete',{
@@ -127,7 +135,7 @@ class WebInterface(object):
             self.write_log('end',{
                 'taskName':self.htn.tree[self.htn.currentSubtask].name
             })     
-            self.htn.reset()
+            self.htn.reset(self.client)
             self.save()
         #an update calls the display function which sends the HTN as it stands to ROS
         elif(message.button=='updateHTN'):
@@ -151,14 +159,16 @@ class WebInterface(object):
             self.ask_question({'question':'Substitution: '+errorInfo['failed_input']+' could not be found. Would you instead like to try','answers':alternatives})
         #if there is an error about group add all the primitive actions we have done and tell the user
         elif((not success) and errorInfo['reason']=='subtask fail'):
-            action = self.getTaskByName(taskName)
-            self.currentQuestion={'name':'Substitution','message':message,'failed_input':errorInfo['failed_input'],'options':alternatives}
-            self.ask_question({'question':'Substitution: '+errorInfo['failed_input']+' could not be found. Would you instead like to try','answers':alternatives})            
+            action = self.htn.getActionByName(taskName)
+            #add all the subtasks to the current task as primitive task till subtask
+            self.htn.addNonPrimitiveTaskAsPrimitive(action,inputs,errorInfo['subtask'])
+            self.ask_question({'question':'Partial Completion Warning: Some or all of the steps of a Learned Action were completed. If the robot is in the middle of a task, please complete it with the Basic Actions','answers':[]})
         elif(isGroupable):
             self.currentQuestion={'name':'Grouping','options':['yes','no']}
             self.ask_question({'question':'Do you wish to group the last 2 subtasks into a single task?','answers':['Yes','No']})
         elif(not success):
-            #This is not a question as it has no answers but it does point out why the user failed to run the task
+            #If this failed on a store, check if the robot hand still has an object 
+            #points out why the user failed to run the task. ask to retry TODO
             self.ask_question({'question':str(errorInfo['reason']),'answers':[]})
 
         if success:

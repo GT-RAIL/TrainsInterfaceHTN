@@ -15,7 +15,7 @@ __version__=  '0.1'
 __license__ = 'BSD'
 
 import copy
-
+import random
 import roslib; roslib.load_manifest('tablebot_heres_how_action_executor')
 # Brings in the SimpleActionClient
 import actionlib
@@ -80,8 +80,11 @@ class Action(object):
     This method groups the current action with another action
     @return The grouped action
     '''
-    def groupWith(self,action):
-    	groupedAction=Action (self.name+" & "+action.name,task_type='learned')
+    def groupWith(self,action,name=None):
+        if name == None:
+            name = self.name+" & "+action.name
+
+    	groupedAction=Action (name,task_type='learned')
         groupedAction.addSubtask(self)
         groupedAction.addSubtask(action)
         used= [0] * len(action.inputs)
@@ -105,14 +108,12 @@ class Action(object):
         return groupedAction
 
 
-    '''
-    Given a series of input names we match them to the correct 
-    input in the system. 
-    If the matching works we can execute the task
-    '''
-    def matchSlots(self,inputs):
-        for input,i in enumerate(inputs):
-            print (input.compare(self.inputs[i]))
+
+    def setSlots(self,inputs,outputs):
+        for i,input in enumerate(inputs):
+            input.slot_name=inputs[i].name
+        for i,output in enumerate(outputs):
+            outputs.slot_name=outputs[i].name
 
     '''
     This method is overriden in subclasses executing with inputs.
@@ -133,7 +134,7 @@ class Action(object):
         for subtask in self.subtasks:
             if self.groupedSubtasks:
                 for i,input in enumerate(self.inputs):
-                    if(i<len(subtask.inputs)):
+                    if i<len(subtask.inputs):
                         subtask.inputs[i].slot_name=self.inputs[i].name
                 success,reason=subtask.execute(inputs,world)
             else:
@@ -147,10 +148,14 @@ class Action(object):
             current_input_point+=len(subtask.inputs)
 
             #if any one fails then the whole thing fails
-            #return which subtask has failed
+            #return which subtask has failed if it is primitive or else return just 
+            #the reason from the primitive action
             #TODO probably need to run an undo or something on the physical side
             if not success:
-                return success,{'reason':'subtask fail','subtask':subtask}
+                if subtask.type=='primitive':
+                    return success,{'reason':'subtask fail','subtask':subtask}
+                else:
+                    return success,reason
             elif reason:
                 outputs.append(reason)
         #if its just one make that the output
@@ -173,6 +178,8 @@ class Pickup(Action):
         #if inputs[0].manipulable==False:
         #    return False,inputs[0].name+" item is not manipulable. (You cannot pick up items in the lunchbox)"
         
+        self.setSlots(inputs,[])
+        
         # Waits until the action server has started up and started
         # listening for goals.
          # client.wait_for_server() 
@@ -185,15 +192,18 @@ class Pickup(Action):
         # Waits for the server to finish performing the action.
         #world.client.wait_for_result()
         # Prints out the result of executing the action
-        if True:
-            self.inputs[0].slot_name=inputs[0].name
-            self.outputs[0].slot_name=inputs[0].name
-            world.holding=inputs[0]
-            print world.holding
-        else :
+
+
+        if random.randint(0, 1):
             return False,"Sorry. We think that we failed to pick the object up. Please try again"
-        # @TODO ROS things to make the actual pick up get called
-        return True,inputs[0]
+        else:
+            world.holding=inputs[0]
+            return True,inputs[0]
+
+    def setSlots(self,inputs,outputs):
+        self.inputs[0].slot_name=inputs[0].name
+        self.outputs[0].slot_name=inputs[0].name
+
 
 #pick up an item into the robots hands. It outputs the item that it has picked up
 class Store(Action):
@@ -211,6 +221,8 @@ class Store(Action):
             return False,"There is not input"
         if not world.holding.name == inputs[0].name:
             return False,"You cannot store when Tablebot is not holding that object"
+        self.setSlots(inputs,[])
+        
 
         # goal = [String(input.name) for input in inputs]
         # message=ExecuteGoal(action =String(self.name),inputs=goal)
@@ -219,20 +231,20 @@ class Store(Action):
      
         # # Waits for the server to finish performing the action.
         # world.client.wait_for_result()
-     
+             
         # Prints out the result of executing the action
-        if True:
+        if random.randint(0, 1):
             world.holding=None
-            inputs[1].addItem(inputs[0])
-            inputs[0].manipulable=False
-            inputs[0].inside=inputs[1]
-            self.inputs[0].slot_name=inputs[0].name
-            self.inputs[1].slot_name=inputs[1].name
             return True,None
         else:
-            return False,"Sorry. That may not have got stored properly. Please try again"
+            return False,"Sorry. That may not have got stored properly. Is the arm still holding %s?"%(inputs[0].name)
 
-        # @TODO ROS things to make the actual pick up get called
+    def setSlots(self,inputs,outputs):
+        inputs[1].addItem(inputs[0])
+        inputs[0].manipulable=False
+        inputs[0].inside=inputs[1]
+        self.inputs[0].slot_name=inputs[0].name
+        self.inputs[1].slot_name=inputs[1].name
 
         
 

@@ -79,10 +79,34 @@ class HTN(object):
 
     def getActionByName(self,name):
         task=None
-        for item in self.tree:
-            if item.name==name:
+        for i,item in self.actions.iteritems():
+            if i==name:
                 task=item
         return task
+
+    #add the non primitive task as primitives up until you reach this subtask in the group
+    def addNonPrimitiveTaskAsPrimitive(self,action,inputs,primitive_subtask):
+        current_input_point=0
+        outputs=[]
+        #execute the subtasks with part of the input 
+        #unless grouped then all subtasks share input
+        for subtask in action.subtasks:
+            if action.groupedSubtasks:
+                match_succeeded,final_input=self.getInputsForSlots(subtask,inputs[0:len(subtask.inputs)])
+                print inputs
+            else:
+                match_succeeded,final_input=self.getInputsForSlots(subtask,inputs[current_input_point:current_input_point+len(subtask.inputs)])
+                current_input_point+=len(subtask.inputs)
+            subtask.setSlots(final_input,[])
+            if not subtask.type=='primitive':
+                addNonPrimitiveTaskAsPrimitive(subtask,inputs,primitive_subtask)
+            else:
+                if not self.match_action(primitive_subtask,subtask):
+                    self.tree[self.currentSubtask].addSubtask(subtask)                     
+                else:
+                    break
+        return True
+
 
     def getInputsForAction(self,action):
         inputs=[]
@@ -138,8 +162,18 @@ class HTN(object):
     def groupLastTasks(self):
         #get the last 2 tasks
         subtasks=self.tree[self.currentSubtask].subtasks
-        #group and keep even the slot names
-        groupedTask=(subtasks[-2]).groupWith(subtasks[-1])
+        name=subtasks[-1].name+" & "+subtasks[-2].name
+
+        if self.actions[subtasks[-1].name+" & "+subtasks[-2].name]:
+            i=1
+            while self.actions[name+str(i)]:
+                i+=1
+                #group and keep even the slot names
+            groupedTask=(subtasks[-2]).groupWith(subtasks[-1],subtasks[-1].name+" & "+subtasks[-2].name+i)
+        else:
+            #group and keep even the slot names
+            groupedTask=(subtasks[-2]).groupWith(subtasks[-1])    
+        
 
         #remove the tasks and add grouped task in
         subtasks=subtasks[:len(subtasks)-2]
@@ -160,6 +194,22 @@ class HTN(object):
 
 
 
+    def getInputsForSlots(self,action,inputs):
+        #array of Item and containers that go in a slot
+        final_input=[]
+        #convert the inputs from a series of strings to a series of Slot classes
+        #for each input find the appropriate slot and put it into it
+
+        for input in inputs:
+            #if this does not work we cannot figure out where to put this input, so exec fails
+            if not self.world.makeSlot(input,action.inputs):
+                print "Error matching slot "+input
+                return False,{'failed_input':input}
+            #there is a slot add to input
+            else:
+                final_input.append(self.world.getObject(input))
+        return True,final_input
+
     #find the correct action and then check if the inputs match
     #if they do, this runs the action and adds it to the current point 
     #in the tree    
@@ -170,41 +220,30 @@ class HTN(object):
         if self.actions[taskName]:
             #make a copy so that you can fill it in with the correct inputs
             action= copy.deepcopy(self.actions[taskName])
-            #array of Item and containers that go in a slot
-            final_input=[]
-            #convert the inputs from a series of strings to a series of Slot classes
-            #for each input find the appropriate slot and put it into it
+            match_succeeded,final_input=self.getInputsForSlots(action,inputs)
+            if match_succeeded:
+                #execute the task
+                success,reason=action.execute(final_input,self.world)
+                if not success:
+                    #if compound figure out which action has failed
+                    #it is returned from class Action as an Object as HTN will not contain those details
+                    if not action.type=='primitive':
+                        return False,False,reason
+                    else:
+                        return False,False,{'reason':reason}
+                    
+                #add the task to the current task that is highlighted-
+                self.tree[self.currentSubtask].addSubtask(action)
+                #check if the 2 subtasks are groupable
+                subtasks=self.tree[self.currentSubtask].subtasks
+                isGroupable=False
+                if len(subtasks)>1:  
+                    if self.isGroupable(subtasks[-2],subtasks[-1],"slot name"):
+                        isGroupable=True
 
-            for input in inputs:
-                #if this does not work we cannot figure out where to put this input, so exec fails
-                if not self.world.makeSlot(input,action.inputs):
-                    print "Error matching slot "+input
-                    return False,False,{'reason':'match fail','failed_input':input}
-                #there is a slot add to input
-                else:
-                    final_input.append(self.world.getObject(input))
-
-            #execute the task
-            success,reason=action.execute(final_input,self.world)
-            if not success:
-                #if compound figure out which action has failed
-                #it is returned from class Action as an Object as HTN will not contain those details
-                if not action.type=='primitive':
-                    return False,False,reason
-                else:
-                    return False,False,{'reason':reason}
-            
-            #add the task to the current task that is highlighted-
-            self.tree[self.currentSubtask].addSubtask(action)
-
-            #check if the 2 subtasks are groupable
-            subtasks=self.tree[self.currentSubtask].subtasks
-            isGroupable=False
-            if len(subtasks)>1:  
-                if self.isGroupable(subtasks[-2],subtasks[-1],"slot name"):
-                    isGroupable=True
-
-            return True,isGroupable,None
+                return True,isGroupable,None
+            else:
+                return False,False,{'reason':'match fail','failed_input':final_input['failed_input']}
         else :
             print 'The  %s action does not exist'% (taskName)
             return False,False,{'reason':'The  %s action does not exist'% (taskName)}
@@ -222,6 +261,23 @@ class HTN(object):
     #also needs to reset the action queue to only primitive actions
     def save(self):        
         pass
+
+    #check if the 2 given actions match
+    #they have the same input and output
+    def match_action(self,action1,action2):
+        if len(action1.inputs) ==len(action2.inputs):
+            if len(action1.outputs) ==len(action2.outputs):
+                for i,input in enumerate(action1.inputs):
+                    if not action2.inputs[i].slot_name==input.slot_name:
+                        return False
+                for i,output in enumerate(action1.outputs):
+                    if not action2.output[i].slot_name==output.slot_name:
+                        return False
+            else:
+                return False
+        else:
+            return False
+        return True
 
     '''
         recursive method that builds the HTN for printing 
