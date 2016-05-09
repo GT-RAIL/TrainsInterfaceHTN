@@ -182,19 +182,19 @@ class Pickup(Action):
         
         # Waits until the action server has started up and started
         # listening for goals.
-         # client.wait_for_server() 
+        client.wait_for_server() 
         # Creates a goal to send to the action server.
-        #goal = [String(input.name) for input in inputs]
-        #message=ExecuteGoal(action =String(self.name),inputs=goal)
-         # Sends the goal to the action server.
-        #world.client.send_goal(message)
+        goal = [String(input.name) for input in inputs]
+        message=ExecuteGoal(action =String(self.name),inputs=goal)
+        # Sends the goal to the action server.
+        world.client.send_goal(message)
      
-        # Waits for the server to finish performing the action.
-        #world.client.wait_for_result()
+        #Waits for the server to finish performing the action.
+        world.client.wait_for_result()
         # Prints out the result of executing the action
 
 
-        if random.randint(0, 1):
+        if world.client.get_result().success:
             return False,"Sorry. We think that we failed to pick the object up. Please try again"
         else:
             world.holding=inputs[0]
@@ -224,16 +224,16 @@ class Store(Action):
         self.setSlots(inputs,[])
         
 
-        # goal = [String(input.name) for input in inputs]
-        # message=ExecuteGoal(action =String(self.name),inputs=goal)
-        #  # Sends the goal to the action server.
-        # world.client.send_goal(message)
+        goal = [String(input.name) for input in inputs]
+        message=ExecuteGoal(action =String(self.name),inputs=goal)
+         # Sends the goal to the action server.
+        world.client.send_goal(message)
      
-        # # Waits for the server to finish performing the action.
-        # world.client.wait_for_result()
+        # Waits for the server to finish performing the action.
+        world.client.wait_for_result()
              
         # Prints out the result of executing the action
-        if random.randint(0, 1):
+        if world.client.get_result().success:
             world.holding=None
             return True,None
         else:

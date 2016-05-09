@@ -301,13 +301,14 @@ class WebInterface(object):
             self.log[type][-1]['htn_state']=self.htn.getHTNState()
 
     def save(self):
-        print self.log
+        self.ask_question({'question':"User End",'answers':[]})
+        
         with open(SAVE_FOLDER+'/'+str(time.time())+'.json', 'a+') as outfile:
             json.dump(self.log, outfile)
         segmenatation = rospy.ServiceProxy('/rail_segmentation/segment', EmptySrv)
         segmenatation()
 
-        self.htn.reset()
+        self.htn.reset(self.client)
 
 
 if __name__ == '__main__':   
