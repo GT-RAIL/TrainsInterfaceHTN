@@ -235,7 +235,7 @@ class WebInterface(object):
         print "undo"
         if len(self.htnAtTimeStep)>1:
             #check if the action he has taken has not created a new task
-            if len(self.htnAtTimeStep[-2]['tree'] == len(self.htnAtTimeStep[-1]['tree']):
+            if len(self.htnAtTimeStep[-2]['tree']) == len(self.htnAtTimeStep[-1]['tree']):
                 #pop the HTN at the last timestep
                 self.htnAtTimeStep.pop()
                 #then set the previous one to the current tree
