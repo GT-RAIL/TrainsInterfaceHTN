@@ -100,9 +100,9 @@ class Action(object):
         for i,use in enumerate(used):
             #slot is in use internally, no need to save
             if not use:
-                new_inputs.append(groupedAction.inputs[len(self.inputs)+i])
+                new_inputs.append(copy.deepcopy(groupedAction.inputs[len(self.inputs)+i]))
 
-        groupedAction.inputs=groupedAction.inputs[:len(self.inputs)]
+        groupedAction.inputs=copy.deepcopy(self.inputs)
         groupedAction.inputs.extend(new_inputs)
         groupedAction.groupedSubtasks=True
         return groupedAction
@@ -238,7 +238,7 @@ class Store(Action):
             world.holding=None
             return True,None
         else:
-            return False,"Sorry. That may not have got stored properly. Is the arm still holding %s?"%(inputs[0].name)
+            return False,"Sorry. That may not have got stored properly. "%(inputs[0].name)
 
     def setSlots(self,inputs,outputs):
         inputs[1].addItem(inputs[0])

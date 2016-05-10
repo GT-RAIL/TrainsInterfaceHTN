@@ -79,8 +79,8 @@ class WebInterface(object):
         self.questionTopic=rospy.Publisher("web_interface/question", WebInterfaceQuestion,queue_size=1)
 
 
-        self.segmenatation = rospy.ServiceProxy('/rail_segmentation/segment', EmptySrv)
-    
+        self.segmentation = rospy.ServiceProxy('/rail_segmentation/segment', EmptySrv)
+        self.segmentation()
 
         #Are we asking a question
         #Currently only Grouping supported but we may have to add teach new task
@@ -111,7 +111,7 @@ class WebInterface(object):
                 })     
                 self.htnAtTimeStep.append({'tree':copy.deepcopy(self.htn.tree),'holding':copy.deepcopy(self.htn.world.holding)})
                 self.htnDisplayTopic.publish(self.htn.display())
-                self.segmenatation()     
+                self.segmentation()     
         elif(message.button=='start'):
             self.htn.reset(self.client)
             self.write_log('user',{
@@ -119,7 +119,7 @@ class WebInterface(object):
             })     
 
             self.htnDisplayTopic.publish(self.htn.display())      
-            self.segmenatation()     
+            self.segmentation()     
         #this refers to completing of a subtask.
         elif(message.button=='taskComplete'):
             self.write_log('task complete',{
@@ -142,7 +142,9 @@ class WebInterface(object):
             if LOGGING:
                 print self.htn.display()
             self.htnDisplayTopic.publish(self.htn.display())
-        
+        elif(message.button=='segment'):
+            self.segmentation()
+            self.htnDisplayTopic.publish(self.htn.display())        
 
     #ROS topic for receiving executed actions with an array of inputs
     def execute_task(self,message):
@@ -167,7 +169,7 @@ class WebInterface(object):
             #If this failed on a store, check if the robot hand still has an object 
             #points out why the user failed to run the task. ask to retry TODO
             self.ask_question({'question':str(errorInfo['reason']),'answers':[]})
-        elif(isGroupable):
+        elif(success and isGroupable):
             self.currentQuestion={'name':'Grouping','options':['yes','no']}
             self.ask_question({'question':'Do you wish to group the last 2 subtasks into a single task?','answers':['Yes','No']})
 
@@ -305,8 +307,7 @@ class WebInterface(object):
         
         with open(SAVE_FOLDER+'/'+str(time.time())+'.json', 'a+') as outfile:
             json.dump(self.log, outfile)
-        segmenatation = rospy.ServiceProxy('/rail_segmentation/segment', EmptySrv)
-        segmenatation()
+        self.segmentation()
 
         self.htn.reset(self.client)
 
@@ -326,10 +327,6 @@ if __name__ == '__main__':
         rospy.Subscriber('object_recognition_listener/recognized_objects', SegmentedObjectList, web.objects_segmented)
 
     print "Started"
-    #Call segmenatation
-    segmenatation = rospy.ServiceProxy('/rail_segmentation/segment', EmptySrv)
-    segmenatation()
-    print "Segmentation Done"
     rospy.spin()
 
 #we're not using ROS pick up the commands from a file

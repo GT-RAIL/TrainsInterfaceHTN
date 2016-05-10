@@ -164,7 +164,7 @@ class HTN(object):
         subtasks=self.tree[self.currentSubtask].subtasks
         name=subtasks[-2].name+" & "+subtasks[-1].name
         print name
-        if self.actions.get(subtasks[-1].name+" & "+subtasks[-2].name):
+        if self.actions.get(subtasks[-2].name+" & "+subtasks[-1].name):
             i=1
             while self.actions.get(name+str(i)):
                 i+=1
@@ -180,7 +180,6 @@ class HTN(object):
         subtasks.append(groupedTask)
         #add the new subtasks list in
         self.tree[self.currentSubtask].subtasks=subtasks 
-        print self.tree[self.currentSubtask]
         #reset the input of the top level to be the bottom
         self.tree[self.currentSubtask].inputs=[]
         self.tree[self.currentSubtask].outputs=[]
@@ -221,6 +220,7 @@ class HTN(object):
             #make a copy so that you can fill it in with the correct inputs
             action= copy.deepcopy(self.actions[taskName])
             match_succeeded,final_input=self.getInputsForSlots(action,inputs)
+            #if there are matches that can be made
             if match_succeeded:
                 #execute the task
                 success,reason=action.execute(final_input,self.world)
@@ -271,7 +271,7 @@ class HTN(object):
                     if not action2.inputs[i].slot_name==input.slot_name:
                         return False
                 for i,output in enumerate(action1.outputs):
-                    if not action2.output[i].slot_name==output.slot_name:
+                    if not action2.outputs[i].slot_name==output.slot_name:
                         return False
             else:
                 return False
