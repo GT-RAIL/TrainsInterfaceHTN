@@ -238,7 +238,7 @@ class Store(Action):
             world.holding=None
             return True,None
         else:
-            return False,"Sorry. That may not have got stored properly. "%(inputs[0].name)
+            return False,"Sorry. %s may not have got stored properly. "%(inputs[0].name)
 
     def setSlots(self,inputs,outputs):
         inputs[1].addItem(inputs[0])

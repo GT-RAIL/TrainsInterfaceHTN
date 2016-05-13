@@ -11,11 +11,11 @@
             {"name": "Pear", "type": "Fruit"}, 
             {"name": "Raisins", "type": "Snack"}, 
             {"name": "Soup", "type": "Main"}, 
+            {"name": "Noodles", "type": "Main"}, 
             {"name": "Tuna", "type": "Main"}],
 "containers":[
             {"name": "Lunchbox 1", "type": "Lunchbox"}, 
             {"name": "Lunchbox 2", "type": "Lunchbox"}, 
-            {"name": "Lunchbox 3", "type": "Lunchbox"}
                   ]
 
       }
