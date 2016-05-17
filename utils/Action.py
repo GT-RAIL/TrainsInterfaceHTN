@@ -177,8 +177,9 @@ class Pickup(Action):
             return False,"You cannot pick up when Tablebot is holding an object"
         #if inputs[0].manipulable==False:
         #    return False,inputs[0].name+" item is not manipulable. (You cannot pick up items in the lunchbox)"
+        if not self.setSlots(inputs,[]):
+            return False,"We could not find the object on the table"
         
-        self.setSlots(inputs,[])
         
         # Waits until the action server has started up and started
         # listening for goals.
@@ -202,8 +203,11 @@ class Pickup(Action):
 
 
     def setSlots(self,inputs,outputs):
+        if not inputs[0]:
+            return False
         self.inputs[0].slot_name=inputs[0].name
         self.outputs[0].slot_name=inputs[0].name
+        return True
 
 
 #pick up an item into the robots hands. It outputs the item that it has picked up
@@ -222,7 +226,8 @@ class Store(Action):
             return False,"There is not input"
         if not world.holding.name == inputs[0].name:
             return False,"You cannot store when Tablebot is not holding that object"
-        self.setSlots(inputs,[])
+        if not self.setSlots(inputs,[]):
+            return False,"We could not find the object on the table"
         
 
         goal = [String(input.name) for input in inputs]
@@ -241,11 +246,14 @@ class Store(Action):
             return False,"Sorry. %s may not have got stored properly. "%(inputs[0].name)
 
     def setSlots(self,inputs,outputs):
+        if not len(inputs)==2:
+            return False;
         inputs[1].addItem(inputs[0])
         inputs[0].manipulable=False
         inputs[0].inside=inputs[1]
         self.inputs[0].slot_name=inputs[0].name
         self.inputs[1].slot_name=inputs[1].name
+        return True
 
         
 

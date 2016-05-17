@@ -2,7 +2,7 @@
             {"name": "Cheezits", "type": "Snack"},
             {"name": "Coffee", "type": "Drink"},
             {"name": "Cookies", "type": "Snack"},
-            {"name": "Juice", "type": "Drink"}, 
+            {"name": "Tuna", "type": "Main"}, 
             {"name": "Lemon", "type": "Fruit"}, 
             {"name": "Milk", "type": "Drink"}, 
             {"name": "Nutella", "type": "Snack"}, 
@@ -12,10 +12,11 @@
             {"name": "Raisins", "type": "Snack"}, 
             {"name": "Soup", "type": "Main"}, 
             {"name": "Noodles", "type": "Main"}, 
-            {"name": "Tuna", "type": "Main"}],
+            {"name": "Tuna", "type": "Main"},
+            {"name": "Juice", "type": "Drink"}],
 "containers":[
             {"name": "Lunchbox 1", "type": "Lunchbox"}, 
-            {"name": "Lunchbox 2", "type": "Lunchbox"}, 
+            {"name": "Lunchbox 2", "type": "Lunchbox"}
                   ]
 
       }

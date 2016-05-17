@@ -47,8 +47,8 @@ rospack = RosPack()
       CONSTANTS
 ---------------------
 '''
-SAVE_FOLDER='save'
-ERROR_LOG_FOLDER='errorlog'
+SAVE_FOLDER=rospack.get_path("pydisco")+'/save'
+ERROR_LOG_FOLDER=rospack.get_path("pydisco")+'/errorlog'
 
 COMMAND_FILE=rospack.get_path("pydisco")+'/utils/commands.json'
 
@@ -315,7 +315,6 @@ class WebInterface(object):
 if __name__ == '__main__':   
     rospy.init_node('trains_htn_planner', anonymous=False)
     with open(ITEMS_FILE) as item_file:    
-
         items= json.load(item_file)
         web=WebInterface(items)
 
