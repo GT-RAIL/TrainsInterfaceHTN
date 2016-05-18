@@ -7,12 +7,26 @@
 3. Working on Grouping tasks together
 4. Logging & undo
 
-##How to Use
+##How to Run
 In ROS
 1. rosrun pydisco heres_how_lunchpacking_htn.py 
-
 
 
 In pure Python
 1. Set up a command list from commands.json
 2. run `python heres_how_lunchpacking_htn.py`
+
+###Background Services to run with tablebot
+
+Run the Tablebot
+
+    roslaunch tablebot_bringup tablebot_bringup.launch
+    
+Run the Web Services and MJpegServer 
+
+     roslaunch tablebot_heres_how_action_executor heres_how_web_services.launch 
+
+Execute Actions
+
+    rosrun tablebot_heres_how_action_executor tablebot_heres_how_action_executor
+    rosrun tablebot_action_queue tablebot_action_queue
