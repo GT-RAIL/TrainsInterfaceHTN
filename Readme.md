@@ -9,10 +9,12 @@
 
 ##How to Run
 In ROS
+
 1. rosrun pydisco heres_how_lunchpacking_htn.py 
 
 
 In pure Python
+
 1. Set up a command list from commands.json
 2. run `python heres_how_lunchpacking_htn.py`
 
@@ -30,3 +32,7 @@ Execute Actions
 
     rosrun tablebot_heres_how_action_executor tablebot_heres_how_action_executor
     rosrun tablebot_action_queue tablebot_action_queue
+
+Finally, run the HTN Server
+
+    rosrun pydisco heres_how_lunchpacking_htn.py
