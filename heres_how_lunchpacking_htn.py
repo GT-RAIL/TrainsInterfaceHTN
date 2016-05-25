@@ -172,7 +172,8 @@ class WebInterface(object):
         elif(success and isGroupable):
             self.currentQuestion={'name':'Grouping','options':['yes','no']}
             self.ask_question({'question':'Do you wish to group the last 2 subtasks into a single task?','answers':['Yes','No']})
-
+        elif(len(self.htn.tree[0].subtasks)==3):
+            self.ask_question({'question':'You can end the current task by pressing Finish Task. You can then apply all the actions to new boxes and items.'})
         if success:
             self.htnAtTimeStep.append({'tree':copy.deepcopy(self.htn.tree),'holding':copy.deepcopy(self.htn.world.holding)})
 

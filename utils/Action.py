@@ -203,7 +203,7 @@ class Pickup(Action):
 
 
     def setSlots(self,inputs,outputs):
-        if not inputs[0]:
+        if len(inputs)==0:
             return False
         self.inputs[0].slot_name=inputs[0].name
         self.outputs[0].slot_name=inputs[0].name
