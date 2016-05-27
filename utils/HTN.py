@@ -111,7 +111,12 @@ class HTN(object):
     def getInputsForAction(self,action):
         inputs=[]
         for input in self.actions[action].inputs:
-            inputs.append({'type':input.type,'objects':self.world.getObjectsByType(input.type,input.criterion)})
+           # inputs.append({'type':input.type,'objects':self.world.getObjectsByType(input.type,input.criterion)})
+           if not input.slot_name == None:
+                inputs.append({'type':input.type,'objects':[input.slot_name]})
+           else:
+		inputs.append({'type':input.type,'objects':self.world.getObjectsByType(input.type,input.criterion)})
+
         return inputs
 
     #checks if 2 tasks are groupable
@@ -251,7 +256,8 @@ class HTN(object):
     #ending a subtask. Over here we add this task to the complex actions
     def saveCurrentSubtask(self):
         #self.actions.append()
-        action= self.removeSlotNamesRecursive(self.tree[self.currentSubtask])
+       # action= self.removeSlotNamesRecursive(self.tree[self.currentSubtask])
+        action= copy.deepcopy(self.tree[self.currentSubtask])
         action.type='learned'
         self.actions[action.name]=action
 
