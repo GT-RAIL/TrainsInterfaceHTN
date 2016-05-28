@@ -9,8 +9,6 @@ __author__ =  'Aaron St. Clair <astclair@cc.gatech.edu>'
 __version__=  '0.1'
 __license__ = 'BSD'
 
-#from __future__ import print_function
-
 
 #ROS things
 import sys
@@ -53,7 +51,9 @@ ERROR_LOG_FOLDER=rospack.get_path("pydisco")+'/errorlog'
 COMMAND_FILE=rospack.get_path("pydisco")+'/utils/commands.json'
 
 ITEMS_FILE=rospack.get_path("pydisco")+'/utils/items.json' #file with a list of items and containers in 
+
 LOGGING = True
+
 
 class Object(object):
     pass
@@ -63,12 +63,12 @@ class Object(object):
     It will listen for buttons being pressed on the web so that it can pass information
 '''
 class WebInterface(object):
-    def __init__(self,items):
+    def __init__(self,items,ask_questions):
         
         self.client = actionlib.SimpleActionClient('/web_interface/execute_primitive_action', ExecuteAction)
         self.client.wait_for_server()
 
-        self.htn=HTN(items,self.client);
+        self.htn=HTN(items,ask_questions,self.client);
 
         # Topic to reenable user interface 
         self.htnUserFeedbackTopic=rospy.Publisher("web_interface/execute_action_feedback", Bool,queue_size=10)
@@ -92,6 +92,8 @@ class WebInterface(object):
         #stores a copy of the HTN at every timestep
         #used for the UNDO feature
         self.htnAtTimeStep=[]
+
+        self.asking_questions=ask_questions
 
     #this is run when a particular button is clicked on the Web Interface
     def button_clicked(self,message):
@@ -150,15 +152,18 @@ class WebInterface(object):
     def execute_task(self,message):
         taskName = HTMLParser.HTMLParser().unescape(message.action)
         if LOGGING:
-            print( "<Execute Callback> " + taskName )
+            print( "<Execute Callback> " + taskName +" "+str(message.inputs))
         inputs =message.inputs; 
         success,isGroupable,errorInfo=self.htn.executeTask(taskName, inputs);
         #Ask questions about grouping and about substitution
         if((not success) and errorInfo['reason']=='match fail'):
             #one or more of the inputs might have failed to register
-            alternatives=self.htn.world.findAlternatives(errorInfo['failed_input'])
-            self.currentQuestion={'name':'Substitution','message':message,'failed_input':errorInfo['failed_input'],'options':alternatives}
-            self.ask_question({'question':'Substitution: '+errorInfo['failed_input']+' could not be found. Would you instead like to try','answers':alternatives})
+            if self.asking_questions:
+                alternatives=self.htn.world.findAlternatives(errorInfo['failed_input'])
+                self.currentQuestion={'name':'Substitution','message':message,'failed_input':errorInfo['failed_input'],'options':alternatives}
+                self.ask_question({'question':'Substitution: '+errorInfo['failed_input']+' could not be found. Would you instead like to try','answers':alternatives})
+            else:
+                self.ask_question({'question':errorInfo['failed_input']+' could not be found.','answers':[]})
         #if there is an error about group add all the primitive actions we have done and tell the user
         elif((not success) and errorInfo['reason']=='subtask fail'):
             action = self.htn.getActionByName(taskName)
@@ -167,13 +172,11 @@ class WebInterface(object):
             self.ask_question({'question':'Partial Completion Warning: Some or all of the steps of a Learned Action were completed. If the robot is in the middle of a task, please complete it with the Basic Actions','answers':[]})
         elif(not success):
             #If this failed on a store, check if the robot hand still has an object 
-            #points out why the user failed to run the task. ask to retry TODO
+            #points out why the user failed to run the task. ask to retry
             self.ask_question({'question':str(errorInfo['reason']),'answers':[]})
         elif(success and isGroupable):
             self.currentQuestion={'name':'Grouping','options':['yes','no']}
             self.ask_question({'question':'Do you wish to group the last 2 subtasks into a single task?','answers':['Yes','No']})
-        elif(len(self.htn.tree[0].subtasks)==3):
-            self.ask_question({'question':'You can end the current task by pressing Finish Task. You can then apply all the actions to new boxes and items.'})
         if success:
             self.htnAtTimeStep.append({'tree':copy.deepcopy(self.htn.tree),'holding':copy.deepcopy(self.htn.world.holding)})
 
@@ -219,6 +222,7 @@ class WebInterface(object):
                     inputs=self.currentQuestion['message'].inputs
                     new_items = [answer if x==self.currentQuestion['failed_input'] else x for x in inputs]
                     self.currentQuestion['message'].inputs=new_items
+                    print self.currentQuestion
                     self.execute_task(self.currentQuestion['message'])
 
             self.htnDisplayTopic.publish(self.htn.display())
@@ -233,7 +237,6 @@ class WebInterface(object):
         self.currentQuestion=None
 
     #takes the HTN to how we saw it in the last time it was recorded
-    #TODO Deal With the World
     def undo(self):
         print "undo"
         if len(self.htnAtTimeStep)>1:
@@ -281,6 +284,7 @@ class WebInterface(object):
             result['inputs'].append(WebInterfaceInput())
             result['inputs'][-1].type=input['type']
             result['inputs'][-1].objects=input['objects']
+        print [item.name for item in self.htn.world.available_items]
         return result
 
     #run when a list of objects is in the world. This then updates the 
@@ -317,7 +321,13 @@ if __name__ == '__main__':
     rospy.init_node('trains_htn_planner', anonymous=False)
     with open(ITEMS_FILE) as item_file:    
         items= json.load(item_file)
-        web=WebInterface(items)
+        if not sys.argv[1]:
+            ask_question=True
+        elif str.lower(sys.argv[1])=='false':
+            ask_question=False
+        else:
+            ask_question=True
+        web=WebInterface(items,ask_question)
 
         rospy.Subscriber("web_interface/button", WebInterfaceButton,web.button_clicked)
         rospy.Service('web_interface/action_inputs', WebInterfaceActionInputs, web.action_inputs)
@@ -343,8 +353,3 @@ else:
                 web.objects_segmented(datum['message'])
             elif(datum['type']=='question_response'):
                 web.get_response(datum['message'])
-# if __name__ == '__main__':
-#     rospy.init_node('heres_how', anonymous=False)
-#     w = World()
-#     rospy.on_shutdown(shutdown)
-#     rospy.spin()

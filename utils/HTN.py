@@ -20,8 +20,9 @@ from Item import Item
 from World import World
 class HTN(object):
 
-    def __init__(self,items,client):
+    def __init__(self,items,ask_questions,client):
         self.items=items
+        self.suggestions_on=ask_questions #if True then we ask questions
         self.reset(client)
 
     def reset(self,client):
@@ -112,10 +113,15 @@ class HTN(object):
         inputs=[]
         for input in self.actions[action].inputs:
            # inputs.append({'type':input.type,'objects':self.world.getObjectsByType(input.type,input.criterion)})
-           if not input.slot_name == None:
-                inputs.append({'type':input.type,'objects':[input.slot_name]})
-           else:
-		inputs.append({'type':input.type,'objects':self.world.getObjectsByType(input.type,input.criterion)})
+            if input.type=='Container':
+                inputs.append({'type':input.type,'objects':self.world.getObjectsByType(input.type,input.criterion)})
+            elif not input.slot_name == None:
+                if self.suggestions_on:
+                    inputs.append({'type':input.type,'objects':self.world.findAlternatives(input.slot_name)})
+                else:
+                    inputs.append({'type':input.type,'objects':[input.slot_name]})
+            else:
+                inputs.append({'type':input.type,'objects':self.world.getObjectsByType(input.type,input.criterion)})
 
         return inputs
 
@@ -203,7 +209,6 @@ class HTN(object):
         final_input=[]
         #convert the inputs from a series of strings to a series of Slot classes
         #for each input find the appropriate slot and put it into it
-
         for input in inputs:
             #if this does not work we cannot figure out where to put this input, so exec fails
             if not self.world.makeSlot(input,action.inputs):

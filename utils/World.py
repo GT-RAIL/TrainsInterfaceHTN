@@ -57,7 +57,7 @@ class World(object):
     numeric IDs
     '''
     def compare(self,item1,item2):
-        if item1.upper().startswith(item2.upper()):
+        if str(item1).upper().startswith(str(item2).upper()):
             return True
         else:
             return False
@@ -146,14 +146,14 @@ class World(object):
         for item in available_items:
             if self.compare(input,item.name):
                 for action_input in action_inputs:
-                    if action_input.slot_name==None and action_input.type=='Item':
+                    if action_input.type=='Item':
                         action_input.slot_name=input
                         return True
 
         for container in self.containers:
             if(input==container.name):
                 for action_input in action_inputs:
-                    if action_input.slot_name==None and action_input.type=='Container':
+                    if action_input.type=='Container':
                         action_input.slot_name=input
                         return True
         return False
