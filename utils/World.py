@@ -128,10 +128,6 @@ class World(object):
         for item in self.available_items:
             if type==item.typeName and not item.name ==input:
                     alternatives.append(item.name)
-        if(len(alternatives)>0):
-            alternatives.append('None. Undo!')
-        else:
-            alternatives.append('No alternatives detected, Okay.')
         return alternatives
 
 

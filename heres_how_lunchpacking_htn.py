@@ -160,6 +160,11 @@ class WebInterface(object):
             #one or more of the inputs might have failed to register
             if self.asking_questions:
                 alternatives=self.htn.world.findAlternatives(errorInfo['failed_input'])
+                #add a none option if the user wants to do nothing
+                if(len(alternatives)>0):
+                    alternatives.append('None. Undo!')
+                else:
+                    alternatives.append('No alternatives detected, Okay.')
                 self.currentQuestion={'name':'Substitution','message':message,'failed_input':errorInfo['failed_input'],'options':alternatives}
                 self.ask_question({'question':'Substitution: '+errorInfo['failed_input']+' could not be found. Would you instead like to try','answers':alternatives})
             else:
@@ -321,7 +326,7 @@ if __name__ == '__main__':
     rospy.init_node('trains_htn_planner', anonymous=False)
     with open(ITEMS_FILE) as item_file:    
         items= json.load(item_file)
-        if not sys.argv[1]:
+        if len(sys.argv)<2:
             ask_question=True
         elif str.lower(sys.argv[1])=='false':
             ask_question=False
