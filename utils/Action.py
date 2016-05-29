@@ -199,7 +199,7 @@ class Pickup(Action):
             world.holding=inputs[0]
             return True,inputs[0]            
         else:
-            return False,"Sorry. We think that we failed to pick the object up. Please try again"
+            return False,"Sorry. We think that we failed to pick the object up. Please try again. <br /> NOTE: Sometimes the robot cannot reach the object because of other objects in the way. In that case the best thing is to try another object"
 
 
     def setSlots(self,inputs,outputs):

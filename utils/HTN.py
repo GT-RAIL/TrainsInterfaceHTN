@@ -118,6 +118,8 @@ class HTN(object):
             elif not input.slot_name == None:
                 if self.suggestions_on:
                     inputs.append({'type':input.type,'objects':self.world.findAlternatives(input.slot_name)})
+                    if len(inputs)==0:
+                        inputs.append({'type':input.type,'objects':self.world.getObjectsByType(input.type,input.criterion)})        
                 else:
                     inputs.append({'type':input.type,'objects':[input.slot_name]})
             else:
