@@ -100,7 +100,7 @@ class HTN(object):
                 current_input_point+=len(subtask.inputs)
             subtask.setSlots(final_input,[])
             if not subtask.type=='primitive':
-                addNonPrimitiveTaskAsPrimitive(subtask,inputs,primitive_subtask)
+                self.addNonPrimitiveTaskAsPrimitive(subtask,inputs,primitive_subtask)
             else:
                 if not self.match_action(primitive_subtask,subtask):
                     self.tree[self.currentSubtask].addSubtask(subtask)                     
