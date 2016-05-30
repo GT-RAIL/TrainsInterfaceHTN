@@ -1,22 +1,7 @@
-
-
-##To Do List
-
-1. In Action.py class Pickup and Store we need to call a ROS topic to actually do the pickup
-2. Class HTN is incomplete. 
-3. Working on Grouping tasks together
-4. Logging & undo
-
 ##How to Run
-In ROS
+ `rosrun pydisco heres_how_lunchpacking_htn.py false`
 
-1. rosrun pydisco heres_how_lunchpacking_htn.py 
-
-
-In pure Python
-
-1. Set up a command list from commands.json
-2. run `python heres_how_lunchpacking_htn.py`
+The second parameter `false` is for whether or not to turn suggestions on. It is by default true
 
 ###Background Services to run with tablebot
 
@@ -36,3 +21,13 @@ Execute Actions
 Finally, run the HTN Server
 
     rosrun pydisco heres_how_lunchpacking_htn.py
+
+##Problems and fixes
+
+1. If the user is stuck in the queue, look at the user ID for that user and run
+
+    `rosservice call /rail_user_queue_manager/update_queue [user-id] false 0 30`
+
+2. If the system has an error, that is fine but to reactivate the Interface, you have to run
+
+    `rostopic pub /web_interface/execute_action_feedback std_msgs/Bool true`
