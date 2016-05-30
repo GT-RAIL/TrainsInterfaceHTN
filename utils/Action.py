@@ -161,7 +161,7 @@ class Action(object):
         #if its just one make that the output
         if(len(outputs)<2 and len(outputs)>0):
             outputs=outputs[0]
-    	return True,reason
+    	return True,outputs
 
 
 
@@ -192,10 +192,13 @@ class Pickup(Action):
      
         #Waits for the server to finish performing the action.
         world.client.wait_for_result()
+        
+
+        result=world.client.get_result()
+        if result==None:
+            return False,"The web server is experiencing issues. Ask on the Chat about how to proceed."
         # Prints out the result of executing the action
-
-
-        if world.client.get_result().success:
+        if result.success:
             world.holding=inputs[0]
             return True,inputs[0]            
         else:
@@ -237,9 +240,12 @@ class Store(Action):
      
         # Waits for the server to finish performing the action.
         world.client.wait_for_result()
-             
+        
+        result=world.client.get_result()
+        if result==None:
+            return False,"The web server is experiencing issues. Ask on the Chat about how to proceed."
         # Prints out the result of executing the action
-        if world.client.get_result().success:
+        if result.success:
             world.holding=None
             return True,None
         else:

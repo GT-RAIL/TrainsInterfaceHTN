@@ -116,6 +116,7 @@ class WebInterface(object):
                 self.segmentation()     
         elif(message.button=='start'):
             self.htn.reset(self.client)
+            self.currentQuestion=None
             self.write_log('user',{
                 'id':message.parameters[0]
             })     
@@ -212,6 +213,7 @@ class WebInterface(object):
     #get a response from a question
     def get_response(self,message):
         answer=message.answer
+        print answer
         #if we are asking a question. Sometimes we might just send information and user says ok back
         if(self.currentQuestion):
             if LOGGING:
