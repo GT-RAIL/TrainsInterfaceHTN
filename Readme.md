@@ -26,8 +26,8 @@ Finally, run the HTN Server
 
 1. If the user is stuck in the queue, look at the user ID for that user and run
 
-    rosservice call /rail_user_queue_manager/update_queue [user-id] false 0 30
+    `rosservice call /rail_user_queue_manager/update_queue [user-id] false 0 30`
 
 2. If the system has an error, that is fine but to reactivate the Interface, you have to run
 
-    rostopic pub /web_interface/execute_action_feedback std_msgs/Bool true
+    `rostopic pub /web_interface/execute_action_feedback std_msgs/Bool true`
