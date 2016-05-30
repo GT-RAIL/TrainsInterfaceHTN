@@ -113,7 +113,7 @@ class Action(object):
         for i,input in enumerate(inputs):
             input.slot_name=inputs[i].name
         for i,output in enumerate(outputs):
-            outputs.slot_name=outputs[i].name
+            output.slot_name=outputs[i].name
 
     '''
     This method is overriden in subclasses executing with inputs.
