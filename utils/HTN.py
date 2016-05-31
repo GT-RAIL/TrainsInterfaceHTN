@@ -108,7 +108,10 @@ class HTN(object):
                     break
         return True
 
-
+    '''
+    Gets the inputs for a specific action. 
+    The action is specified by its' name
+    '''
     def getInputsForAction(self,action):
         inputs=[]
         for input in self.actions[action].inputs:

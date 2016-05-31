@@ -94,7 +94,7 @@ class WebInterface(object):
         self.htnAtTimeStep=[]
 
         self.asking_questions=ask_questions
-
+        self.user_id=-1
     #this is run when a particular button is clicked on the Web Interface
     def button_clicked(self,message):
         print message
@@ -120,7 +120,7 @@ class WebInterface(object):
             self.write_log('user',{
                 'id':message.parameters[0]
             })     
-
+            self.user_id=message.parameters[0]
             self.htnDisplayTopic.publish(self.htn.display())      
             self.segmentation()     
         #this refers to completing of a subtask.
@@ -315,7 +315,7 @@ class WebInterface(object):
             self.log[type][-1]['htn_state']=self.htn.getHTNState()
 
     def save(self):
-        self.ask_question({'question':"User End",'answers':[]})
+        self.ask_question({'question':"User End",'answers':[self.user_id],})
         
         with open(SAVE_FOLDER+'/'+str(time.time())+'.json', 'a+') as outfile:
             json.dump(self.log, outfile)
