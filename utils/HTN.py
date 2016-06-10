@@ -13,7 +13,7 @@ __version__=  '0.1'
 __license__ = 'BSD'
 
 import copy
-
+import rospy
 from Action import Action,Pickup,Store,Slot
 from Container import Container
 from Item import Item
@@ -94,7 +94,7 @@ class HTN(object):
         for subtask in action.subtasks:
             if action.groupedSubtasks:
                 match_succeeded,final_input=self.getInputsForSlots(subtask,inputs[0:len(subtask.inputs)])
-                print inputs
+                rospy.logdebug(str(inputs))
             else:
                 match_succeeded,final_input=self.getInputsForSlots(subtask,inputs[current_input_point:current_input_point+len(subtask.inputs)])
                 current_input_point+=len(subtask.inputs)
@@ -178,7 +178,7 @@ class HTN(object):
         #get the last 2 tasks
         subtasks=self.tree[self.currentSubtask].subtasks
         name=subtasks[-2].name+" & "+subtasks[-1].name
-        print name
+        rospy.logdebug("Grouping task "+name)
         if self.actions.get(subtasks[-2].name+" & "+subtasks[-1].name):
             i=1
             while self.actions.get(name+str(i)):
@@ -216,7 +216,7 @@ class HTN(object):
         for input in inputs:
             #if this does not work we cannot figure out where to put this input, so exec fails
             if not self.world.makeSlot(input,action.inputs):
-                print "Error matching slot "+input
+                rospy.logdebug("Error matching slot "+input)
                 return False,{'failed_input':input}
             #there is a slot add to input
             else:
@@ -259,7 +259,7 @@ class HTN(object):
             else:
                 return False,False,{'reason':'match fail','failed_input':final_input['failed_input']}
         else :
-            print 'The  %s action does not exist'% (taskName)
+            rospy.logdebug('The  %s action does not exist ', (taskName))
             return False,False,{'reason':'The  %s action does not exist'% (taskName)}
 
     #ending a subtask. Over here we add this task to the complex actions
@@ -269,8 +269,7 @@ class HTN(object):
         action= copy.deepcopy(self.tree[self.currentSubtask])
         action.type='learned'
         self.actions[action.name]=action
-
-        print self.actions
+        rospy.logdebug('Actions  %s ', str(self.actions))
 
     #this saves the current tree to file and then wipes it 
     #also needs to reset the action queue to only primitive actions
