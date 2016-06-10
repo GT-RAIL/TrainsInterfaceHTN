@@ -267,13 +267,11 @@ class HTN(object):
 
     #ending a subtask. Over here we add this task to the complex actions
     def saveCurrentSubtask(self):
-        #self.actions.append()
-       # action= self.removeSlotNamesRecursive(self.tree[self.currentSubtask])
         action= copy.deepcopy(self.tree[self.currentSubtask])
         action.type='learned'
         self.actions[action.name]=action
 
-        print self.actions
+        
 
     #this saves the current tree to file and then wipes it 
     #also needs to reset the action queue to only primitive actions

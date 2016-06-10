@@ -94,7 +94,8 @@ class World(object):
                 if self.compare(recognized_item.name,item.name):
                     #This item is a match so mark it as recognized
                     self.available_items.append(item)
-
+        if not self.holding==None:
+            self.available_items.append(self.holding)
     '''
     get objects by type
     Criterion is a function that checks for any extra criteria you might need. 
@@ -137,8 +138,8 @@ class World(object):
         #check if it is an item or container
         available_items=[]
         available_items.extend(self.available_items)
-        if not self.holding==None:
-            available_items.append(self.holding)
+        #if not self.holding==None:
+        #   available_items.append(self.holding)
         for item in available_items:
             if self.compare(input,item.name):
                 for action_input in action_inputs:

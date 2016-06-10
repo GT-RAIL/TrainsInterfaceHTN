@@ -223,6 +223,8 @@ class Store(Action):
         super(Store,self).__init__('Store','primitive',[store_object,store_container])
 
     def execute(self,inputs,world):
+        print inputs
+        print world.holding
         if world.holding == None:
             return False,"The robot is not holding anything"
         if not inputs or len(inputs) == 0:

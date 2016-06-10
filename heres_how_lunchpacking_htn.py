@@ -95,6 +95,7 @@ class WebInterface(object):
 
         self.asking_questions=ask_questions
         self.user_id=-1
+        
     #this is run when a particular button is clicked on the Web Interface
     def button_clicked(self,message):
         print message
@@ -153,7 +154,7 @@ class WebInterface(object):
     def execute_task(self,message):
         taskName = HTMLParser.HTMLParser().unescape(message.action)
         if LOGGING:
-            print( "<Execute Callback> " + taskName +" "+str(message.inputs))
+            print(taskName +" "+str(message.inputs))
         inputs =message.inputs; 
         success,isGroupable,errorInfo=self.htn.executeTask(taskName, inputs);
         #Ask questions about grouping and about substitution
@@ -191,8 +192,8 @@ class WebInterface(object):
         self.write_log('execute',{
             'inputs':message.inputs,
             'taskName':taskName,
-
-        })        
+            'success':success
+        })    
 
         self.htnUserFeedbackTopic.publish(Bool(True))
 
@@ -222,14 +223,11 @@ class WebInterface(object):
             if self.currentQuestion['name']=='Grouping':
                 if(answer.lower()=='yes'):
                     self.htn.groupLastTasks()
-                    #if we are grouping tasks, task tree changed log it
-                    #self.htnAtTimeStep.append({'tree':copy.deepcopy(self.htn.tree),'holding':copy.deepcopy(self.htn.world.holding)})
             elif self.currentQuestion['name']=='Substitution':
                 if not (answer.lower()=="none. undo!" or answer.lower()=='no alternatives detected, okay.'):
                     inputs=self.currentQuestion['message'].inputs
                     new_items = [answer if x==self.currentQuestion['failed_input'] else x for x in inputs]
                     self.currentQuestion['message'].inputs=new_items
-                    print self.currentQuestion
                     self.execute_task(self.currentQuestion['message'])
 
             self.htnDisplayTopic.publish(self.htn.display())
@@ -342,7 +340,6 @@ if __name__ == '__main__':
         rospy.Subscriber('web_interface/execute_action', WebInterfaceExecuteAction, web.execute_task)
         rospy.Subscriber('web_interface/question_response', WebInterfaceQuestionResponse, web.get_response)
         rospy.Subscriber('object_recognition_listener/recognized_objects', SegmentedObjectList, web.objects_segmented)
-
     print "Started"
     rospy.spin()
 
