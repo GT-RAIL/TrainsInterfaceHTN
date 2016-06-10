@@ -167,8 +167,9 @@ class Action(object):
 
 #pick up an item into the robots hands. It outputs the item that it has picked up
 class Pickup(Action):
-    def __init__(self):
+    def __init__(self,robot_on):
         pickup_object=Slot('pickup','Item') 
+        self.robot_on=robot_on
         super(Pickup,self).__init__('Pick up','primitive',[pickup_object],[pickup_object])
 
     def execute(self,inputs,world):
@@ -180,25 +181,27 @@ class Pickup(Action):
         if not self.setSlots(inputs,[]):
             return False,"We could not find the object on the table"
         
+        output=False
         
         # Waits until the action server has started up and started
         # listening for goals.
-
-        # Creates a goal to send to the action server.
-        goal = [String(input.name) for input in inputs]
-        message=ExecuteGoal(action =String(self.name),inputs=goal)
-        # Sends the goal to the action server.
-        world.client.send_goal(message)
-     
-        #Waits for the server to finish performing the action.
-        world.client.wait_for_result()
-        
-
-        result=world.client.get_result()
-        if result==None:
-            return False,"The web server is experiencing issues. Ask on the Chat about how to proceed."
+        if self.robot_on:
+            # Creates a goal to send to the action server.
+            goal = [String(input.name) for input in inputs]
+            message=ExecuteGoal(action =String(self.name),inputs=goal)
+            # Sends the goal to the action server.
+            world.client.send_goal(message)
+         
+            #Waits for the server to finish performing the action.
+            world.client.wait_for_result()
+            result=world.client.get_result()
+            if result==None:
+                return False,"The web server is experiencing issues. Ask on the Chat about how to proceed."
+            output=result.success
+        else:
+            output=True
         # Prints out the result of executing the action
-        if result.success:
+        if output:
             world.holding=inputs[0]
             return True,inputs[0]            
         else:
@@ -215,11 +218,11 @@ class Pickup(Action):
 
 #pick up an item into the robots hands. It outputs the item that it has picked up
 class Store(Action):
-    def __init__(self):
+    def __init__(self,robot_on):
         #store an object is only possible if we are holding the object in question
         store_object=Slot('store','Item',lambda world,input: (True if world.holding.name==input  else False) if world.holding else False) 
         store_container=Slot('store','Container') 
-        
+        self.robot_on=robot_on
         super(Store,self).__init__('Store','primitive',[store_object,store_container])
 
     def execute(self,inputs,world):
@@ -234,20 +237,27 @@ class Store(Action):
         if not self.setSlots(inputs,[]):
             return False,"We could not find the object on the table"
         
-
-        goal = [String(input.name) for input in inputs]
-        message=ExecuteGoal(action =String(self.name),inputs=goal)
-         # Sends the goal to the action server.
-        world.client.send_goal(message)
-     
-        # Waits for the server to finish performing the action.
-        world.client.wait_for_result()
+        output=False
         
-        result=world.client.get_result()
-        if result==None:
-            return False,"The web server is experiencing issues. Ask on the Chat about how to proceed."
+        # Waits until the action server has started up and started
+        # listening for goals.
+        if self.robot_on:
+            goal = [String(input.name) for input in inputs]
+            message=ExecuteGoal(action =String(self.name),inputs=goal)
+             # Sends the goal to the action server.
+            world.client.send_goal(message)
+         
+            # Waits for the server to finish performing the action.
+            world.client.wait_for_result()
+            
+            result=world.client.get_result()
+            if result==None:
+                return False,"The web server is experiencing issues. Ask on the Chat about how to proceed."
+            output=result.success
+        else:
+            output=True
         # Prints out the result of executing the action
-        if result.success:
+        if output:
             world.holding=None
             return True,None
         else:
