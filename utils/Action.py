@@ -209,11 +209,15 @@ class Pickup(Action):
 
 
     def setSlots(self,inputs,outputs):
-        if len(inputs)==0:
+        try:
+            if len(inputs)==0:
+                return False
+            self.inputs[0].slot_name=inputs[0].name
+            self.outputs[0].slot_name=inputs[0].name
+            return True
+        except Exception, e:
             return False
-        self.inputs[0].slot_name=inputs[0].name
-        self.outputs[0].slot_name=inputs[0].name
-        return True
+        
 
 
 #pick up an item into the robots hands. It outputs the item that it has picked up
@@ -264,14 +268,17 @@ class Store(Action):
             return False,"Sorry. %s may not have got stored properly. "%(inputs[0].name)
 
     def setSlots(self,inputs,outputs):
-        if not len(inputs)==2:
-            return False;
-        inputs[1].addItem(inputs[0])
-        inputs[0].manipulable=False
-        inputs[0].inside=inputs[1]
-        self.inputs[0].slot_name=inputs[0].name
-        self.inputs[1].slot_name=inputs[1].name
-        return True
+        try:
+            if not len(inputs)==2:
+                return False;
+            inputs[1].addItem(inputs[0])
+            inputs[0].manipulable=False
+            inputs[0].inside=inputs[1]
+            self.inputs[0].slot_name=inputs[0].name
+            self.inputs[1].slot_name=inputs[1].name
+            return True
+        except Exception, e:
+            return False
 
         
 

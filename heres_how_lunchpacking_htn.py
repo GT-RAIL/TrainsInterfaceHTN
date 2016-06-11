@@ -63,12 +63,12 @@ class Object(object):
     It will listen for buttons being pressed on the web so that it can pass information
 '''
 class WebInterface(object):
-    def __init__(self,items,ask_questions):
+    def __init__(self,items,ask_questions,robot_on):
         
         self.client = actionlib.SimpleActionClient('/web_interface/execute_primitive_action', ExecuteAction)
         self.client.wait_for_server()
 
-        self.htn=HTN(items,ask_questions,self.client);
+        self.htn=HTN(items,ask_questions,self.client,robot_on);
 
         # Topic to reenable user interface 
         self.htnUserFeedbackTopic=rospy.Publisher("web_interface/execute_action_feedback", Bool,queue_size=10)
@@ -94,19 +94,20 @@ class WebInterface(object):
         self.htnAtTimeStep=[]
 
         self.asking_questions=ask_questions
+        self.robot_on=robot_on
         self.user_id=-1
         
     #this is run when a particular button is clicked on the Web Interface
     def button_clicked(self,message):
         if(message.button=='teachNewTask'):
             if LOGGING:
-                  rospy.logdebug("Executing teach new task")
+                  rospy.loginfo("Executing teach new task")
             #if adding is successful
             if not self.htn.addNewTask(message.parameters[0]):
                 self.ask_question({'question':'That Task Name is already in use. Please pick a different one','answers':[]})
             else:
                 if LOGGING:
-                    rospy.logdebug(self.htn.display())
+                    rospy.loginfo(self.htn.display())
 
                 self.write_log('task start',{
                     'taskName':message.parameters[0]
@@ -115,7 +116,7 @@ class WebInterface(object):
                 self.htnDisplayTopic.publish(self.htn.display())
                 self.segmentation()     
         elif(message.button=='start'):
-            self.htn.reset(self.client)
+            self.htn.reset(self.client,self.robot_on)
             self.currentQuestion=None
             self.write_log('user',{
                 'id':message.parameters[0]
@@ -138,12 +139,12 @@ class WebInterface(object):
             self.write_log('end',{
                 'taskName':self.htn.tree[self.htn.currentSubtask].name
             })     
-            self.htn.reset(self.client)
+            self.htn.reset(self.client,self.robot_on)
             self.save()
         #an update calls the display function which sends the HTN as it stands to ROS
         elif(message.button=='updateHTN'):
             if LOGGING:
-                  rospy.logdebug(self.htn.display())
+                  rospy.loginfo(self.htn.display())
             self.htnDisplayTopic.publish(self.htn.display())
         elif(message.button=='segment'):
             self.segmentation()
@@ -153,7 +154,7 @@ class WebInterface(object):
     def execute_task(self,message):
         taskName = HTMLParser.HTMLParser().unescape(message.action)
         if LOGGING:
-            rospy.logdebug( "Executing " + taskName +" "+str(message.inputs))
+            rospy.loginfo( "Executing " + taskName +" "+str(message.inputs))
         inputs =message.inputs; 
         success,isGroupable,errorInfo=self.htn.executeTask(taskName, inputs);
         #Ask questions about grouping and about substitution
@@ -197,7 +198,7 @@ class WebInterface(object):
         self.htnUserFeedbackTopic.publish(Bool(True))
 
         if LOGGING:
-            rospy.logdebug(self.htn.display())
+            rospy.loginfo(self.htn.display())
 
 
     #send a question to the ROS topic here
@@ -206,14 +207,14 @@ class WebInterface(object):
         wb=WebInterfaceQuestion()
         wb.question=message['question']
         wb.answers=message['answers']
-        rospy.logdebug("Question: "+message['question']+ " Answers"+str(message['answers']))
+        rospy.loginfo("Question: "+message['question']+ " Answers"+str(message['answers']))
         self.questionTopic.publish(wb)
         
 
     #get a response from a question
     def get_response(self,message):
         answer=message.answer
-        rospy.logdebug( "User Answer"+str(answer))
+        rospy.loginfo( "User Answer "+str(answer))
         #if we are asking a question. Sometimes we might just send information and user says ok back
         if(self.currentQuestion):
             if self.currentQuestion['name']=='Grouping':
@@ -239,8 +240,8 @@ class WebInterface(object):
 
     #takes the HTN to how we saw it in the last time it was recorded
     def undo(self):
-        rospy.logdebug( "Undo button ")
-        rospy.logdebug( self.htn.display())
+        rospy.loginfo( "Undo button ")
+        rospy.loginfo( self.htn.display())
         if len(self.htnAtTimeStep)>1:
             #check if the action he has taken has not created a new task
             if len(self.htnAtTimeStep[-2]['tree']) == len(self.htnAtTimeStep[-1]['tree']):
@@ -277,7 +278,7 @@ class WebInterface(object):
     #eg. For pick up there will be one input
     def action_inputs(self,request):
         request.action=HTMLParser.HTMLParser().unescape(request.action)
-        rospy.logdebug( "Action inputs "+str(request.action))
+        rospy.loginfo( "Action inputs "+str(request.action))
         inputs=self.htn.getInputsForAction(request.action)      
         result={}
         result['inputs']=[]
@@ -307,6 +308,7 @@ class WebInterface(object):
             self.log[type][-1]['word_state']=self.htn.getCurrentWorldState()
         if getHTNState:
             self.log[type][-1]['htn_state']=self.htn.getHTNState()
+        self.log= {}
 
     def save(self):
         self.ask_question({'question':"User End",'answers':[self.user_id],})
@@ -315,20 +317,27 @@ class WebInterface(object):
             json.dump(self.log, outfile)
         self.segmentation()
 
-        self.htn.reset(self.client)
+        self.htn.reset(self.client,self.robot_on)
 
 
 if __name__ == '__main__':   
     rospy.init_node('trains_htn_planner', anonymous=False)
     with open(ITEMS_FILE) as item_file:    
         items= json.load(item_file)
+        if len(sys.argv)<3:
+            robot_on=False
+        elif str.lower(sys.argv[2])=='false':
+            robot_on=False
+        else:
+            robot_on=True
         if len(sys.argv)<2:
             ask_question=True
         elif str.lower(sys.argv[1])=='false':
             ask_question=False
         else:
             ask_question=True
-        web=WebInterface(items,ask_question)
+
+        web=WebInterface(items,ask_question,robot_on)
 
         rospy.Subscriber("web_interface/button", WebInterfaceButton,web.button_clicked)
         rospy.Service('web_interface/action_inputs', WebInterfaceActionInputs, web.action_inputs)
@@ -336,7 +345,7 @@ if __name__ == '__main__':
         rospy.Subscriber('web_interface/execute_action', WebInterfaceExecuteAction, web.execute_task)
         rospy.Subscriber('web_interface/question_response', WebInterfaceQuestionResponse, web.get_response)
         rospy.Subscriber('object_recognition_listener/recognized_objects', SegmentedObjectList, web.objects_segmented)
-        rospy.logdebug("TRAINS Interface Started")
+        rospy.loginfo("TRAINS Interface Started")
     rospy.spin()
 
 #we're not using ROS pick up the commands from a file

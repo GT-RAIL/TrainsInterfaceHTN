@@ -20,20 +20,20 @@ from Item import Item
 from World import World
 class HTN(object):
 
-    def __init__(self,items,ask_questions,client):
+    def __init__(self,items,ask_questions,client,robot_on):
         self.items=items
         self.suggestions_on=ask_questions #if True then we ask questions
-        self.reset(client)
+        self.reset(client,robot_on)
 
-    def reset(self,client):
+    def reset(self,client,robot_on):
         self.tree=[] #the tree is an array of actions starting from the top and going to the bottom
         self.actionsPerformed=[] #maintains the list of Actions executed so we can undo
         self.actions={} #the set of actions that the user can use 
         self.currentSubtask=-1 #the ID of the current task that is being executed
 
         #add out primary tasks into the list of actions
-        pickup = Pickup()
-        store  = Store()
+        pickup = Pickup(robot_on)
+        store  = Store(robot_on)
         self.actions={"Pick up":pickup,"Store":store}
 
         self.world = World(self.items,client) #stores the information about the world
@@ -94,7 +94,7 @@ class HTN(object):
         for subtask in action.subtasks:
             if action.groupedSubtasks:
                 match_succeeded,final_input=self.getInputsForSlots(subtask,inputs[0:len(subtask.inputs)])
-                rospy.logdebug(str(inputs))
+                rospy.loginfo(str(inputs))
             else:
                 match_succeeded,final_input=self.getInputsForSlots(subtask,inputs[current_input_point:current_input_point+len(subtask.inputs)])
                 current_input_point+=len(subtask.inputs)
@@ -181,7 +181,7 @@ class HTN(object):
         #get the last 2 tasks
         subtasks=self.tree[self.currentSubtask].subtasks
         name=subtasks[-2].name+" & "+subtasks[-1].name
-        rospy.logdebug("Grouping task "+name)
+        rospy.loginfo("Grouping task "+name)
         if self.actions.get(subtasks[-2].name+" & "+subtasks[-1].name):
             i=1
             while self.actions.get(name+str(i)):
@@ -219,7 +219,7 @@ class HTN(object):
         for input in inputs:
             #if this does not work we cannot figure out where to put this input, so exec fails
             if not self.world.makeSlot(input,action.inputs):
-                rospy.logdebug("Error matching slot "+input)
+                rospy.loginfo("Error matching slot "+input)
                 return False,{'failed_input':input}
             #there is a slot add to input
             else:
@@ -262,7 +262,7 @@ class HTN(object):
             else:
                 return False,False,{'reason':'match fail','failed_input':final_input['failed_input']}
         else :
-            rospy.logdebug('The  %s action does not exist ', (taskName))
+            rospy.loginfo('The  %s action does not exist ', (taskName))
             return False,False,{'reason':'The  %s action does not exist'% (taskName)}
 
     #ending a subtask. Over here we add this task to the complex actions
@@ -270,7 +270,7 @@ class HTN(object):
         action= copy.deepcopy(self.tree[self.currentSubtask])
         action.type='learned'
         self.actions[action.name]=action
-        rospy.logdebug('Actions  %s ', str(self.actions))
+        rospy.loginfo('Actions  %s ', str(self.actions))
 
     #this saves the current tree to file and then wipes it 
     #also needs to reset the action queue to only primitive actions
